@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-TW">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Zen Stream Logo Design</title>
+      <style>
+         /* 1. 基礎環境設定（模擬你的暗色模式背景） */
+         body {
+            background-color: #0b0e14; /* 你設定的底層背景色 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family:
+               'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* 預設現代字體 */
+         }
+
+         /* 2. Logo 容器 */
+         .zen-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px; /* 圖標與文字的距離 */
+            text-decoration: none; /* 如果是鏈接 */
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+         }
+
+         .zen-logo:hover {
+            opacity: 0.85; /* 微小的交互效果 */
+         }
+
+         /* 3. 禪意圖標 (Zen Icon) - 純 CSS */
+         .zen-icon-container {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+         }
+
+         /* 抽象的 Enso 圓 (未閉合的禪圓) */
+         .zen-enso {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid #e4e7eb; /* 文字主色 */
+            border-top-color: transparent; /* 留出開口，象徵非閉合、無限 */
+            transform: rotate(45deg); /* 調整開口角度 */
+            box-sizing: border-box;
+         }
+
+         /* 中間的極簡播放三角形 (Stream) */
+         .zen-play-triangle {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 8px 0 8px 14px; /* 製作三角形 */
+            border-color: transparent transparent transparent #a07cfe; /* 使用你設定的主色（薰衣草紫） */
+            margin-left: 4px; /* 視覺修正，讓三角形看起來居中 */
+            border-radius: 2px; /* 微小圓角，更顯柔和 */
+         }
+
+         /* 4. 文字部分 */
+         .zen-text {
+            color: #e4e7eb; /* 文字主色 */
+            font-size: 28px;
+            letter-spacing: -0.5px; /* 稍微緊縮，更有設計感 */
+            display: flex;
+            align-items: baseline;
+         }
+
+         .text-zen {
+            font-weight: 700; /* 粗體，強調專注 */
+         }
+
+         .text-stream {
+            font-weight: 300; /* 细體，強調流動與輕盈 */
+            opacity: 0.9;
+         }
+      </style>
+   </head>
+   <body>
+      <div class="zen-logo">
+         <div class="zen-icon-container">
+            <div class="zen-enso"></div>
+            <div class="zen-play-triangle"></div>
+         </div>
+         <div class="zen-text">
+            <span class="text-zen">Zen</span>
+            <span class="text-stream">Stream</span>
+         </div>
+      </div>
+   </body>
+</html>
