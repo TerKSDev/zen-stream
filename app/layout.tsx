@@ -36,7 +36,7 @@ export default function RootLayout({
       >
          <body>
             <SideNav />
-            <main className="flex flex-1 flex-col max-h-screen">
+            <main className="flex flex-1 flex-col max-h-screen h-screen relative">
                <Header />
                {children}
             </main>
