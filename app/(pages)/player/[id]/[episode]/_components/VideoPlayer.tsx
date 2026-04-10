@@ -63,7 +63,7 @@ export default function VideoPlayer({ videoUrl, poster }: VideoPlayerProps) {
 
       return () => {
          if (art && art.destroy) {
-            art.destroy(false);
+            art.destroy(true); // 改為 true，徹底移除 DOM 元素，防止 React Strict Mode 產生重影
          }
       };
    }, [videoUrl, poster]);

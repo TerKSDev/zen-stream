@@ -36,7 +36,7 @@ export default function AnimeEpisodes({
          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 max-h-[450px] lg:max-h-[600px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20 transition-all">
             {episodes.map((ep) => (
                <Link
-                  href={`/player/${animeId}?ep=${ep.mal_id}`}
+                  href={`/player/${animeId}/${ep.mal_id}`}
                   key={ep.mal_id}
                   className="relative flex flex-col gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-anime-primary/50 hover:shadow-[0_0_20px_rgba(160,124,254,0.15)] transition-all duration-300 group cursor-pointer overflow-hidden"
                >
