@@ -1,5 +1,5 @@
 // app/anime/[id]/page.tsx
-import VideoPlayer from '../_components/VideoPlayer';
+import VideoPlayer from './_components/VideoPlayer';
 import {
    getStreamingLinks,
    searchAnimeOnConsumet,

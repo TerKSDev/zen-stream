@@ -68,14 +68,24 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
          onMouseEnter={() => setIsHovered(true)}
          onMouseLeave={() => setIsHovered(false)}
       >
-         <div className="absolute inset-0 z-0">
-            <Image
-               src={apiBgImage || localBgImage}
-               alt={activeAnime?.title || 'Background Image'}
-               fill
-               priority
-               className="object-cover object-center transition-opacity duration-1000 opacity-100 group-hover:opacity-90"
-            />
+         <div className="absolute inset-0 z-0 bg-[#0B0E14]">
+            {animes.map((anime, index) => {
+               const isActive = index === activeIndex;
+               const bgApi =
+                  anime?.bannerImage || anime?.images?.webp?.large_image_url;
+               const bgLocal = `/top_season_anime/top_${index + 1}.jpeg`;
+
+               return (
+                  <Image
+                     key={`bg-${anime.mal_id}-${index}`}
+                     src={bgApi || bgLocal}
+                     alt={anime?.title || 'Background Image'}
+                     fill
+                     priority={index === 0} // 只有第一張圖需要優先載入
+                     className={`object-cover object-center transition-opacity duration-1000 ease-in-out ${isActive ? 'opacity-100 group-hover:opacity-90' : 'opacity-0'}`}
+                  />
+               );
+            })}
          </div>
 
          <div className="absolute inset-0 bg-linear-to-r from-black via-black/80 to-black/40 pointer-events-none transition-opacity duration-500" />
@@ -157,7 +167,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
 
                      return (
                         <div
-                           key={index}
+                           key={`${anime.mal_id}-${index}`}
                            onClick={() => handleSelect(index)}
                            className={`flex-none cursor-pointer group/item relative rounded-xl transition-all duration-500 ease-out ${
                               isActive
