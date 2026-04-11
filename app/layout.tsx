@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_JP, Plus_Jakarta_Sans } from 'next/font/google';
+import { Suspense } from 'react';
 import './globals.css';
 import SideNav from './_components/SideNav';
 import Header from './_components/Header';
@@ -37,7 +38,9 @@ export default function RootLayout({
          <body>
             <SideNav />
             <main className="relative flex h-screen max-h-screen min-h-0 min-w-0 flex-1 flex-col">
-               <Header />
+               <Suspense fallback={null}>
+                  <Header />
+               </Suspense>
                {children}
             </main>
          </body>

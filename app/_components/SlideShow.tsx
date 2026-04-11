@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { IoChevronBackOutline, IoChevronForwardOutline } from 'react-icons/io5';
 import Link from 'next/link';
+import type { AnimeCard, AnimeGenre } from '@/lib/types/anime';
 
 interface HeroSlideshowProps {
-   animes: any[];
+   animes: AnimeCard[];
 }
 
 export default function SlideShow({ animes }: HeroSlideshowProps) {
@@ -15,7 +16,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
    useEffect(() => {
-      if (isHovered) return;
+      if (isHovered || animes.length === 0) return;
 
       const timer = setInterval(() => {
          setActiveIndex((prevIndex) => (prevIndex + 1) % animes.length);
@@ -118,7 +119,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
 
             {activeAnime?.genres && activeAnime.genres.length > 0 && (
                <div className="flex flex-wrap gap-2 mt-1">
-                  {activeAnime.genres.slice(0, 3).map((genre: any) => (
+                  {activeAnime.genres.slice(0, 3).map((genre: AnimeGenre) => (
                      <span
                         key={genre.mal_id}
                         className="text-[11px] md:text-xs px-3 py-1 rounded-full border border-white/10 bg-white/10 backdrop-blur-md text-white/90 hover:bg-anime-primary/60 hover:border-anime-primary/60 transition-all cursor-default"
