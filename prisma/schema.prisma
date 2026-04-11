@@ -15,33 +15,38 @@ datasource db {
 model User {
   id  String @id @default(cuid()) 
   name String
+  password String
   email String @unique
 
   bookmarks Bookmark[]
   histories History[]
 }
 
-model Anime {
-  id String @id @default(cuid())
-  title String
-  imageUrl String
-}
-
 model Bookmark {
   id String @id @default(cuid())
-  url String
+  malId Int
   title String
-
+  image String?
+  addedAt DateTime @default(now())
+  
   userId String
   user User @relation(fields: [userId], references: [id])
+
+@@unique([userId, malId])
 }
 
 model History {
   id String @id @default(cuid())
+  malId Int
   title String
-  url String
+  episode String
+  progressTime Float
+  image String?
+  updatedAt DateTime @updatedAt
 
   userId String
   user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, malId, episode])
 }
 
