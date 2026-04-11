@@ -161,7 +161,7 @@ export default async function AnimeDetailPage({
                      />
                   </div>
                   <Link
-                     href={`/player/${mal_id}`}
+                     href={`/player/${mal_id}/1`}
                      className="w-full flex items-center justify-center gap-2 px-8 py-3.5 bg-anime-primary text-white text-lg font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.6)] active:scale-95 transition-all duration-300"
                   >
                      <IoPlayCircle size={26} />
