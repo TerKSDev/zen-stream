@@ -1,14 +1,28 @@
 import { IoCompassOutline } from 'react-icons/io5';
 import ExploreClient from './_components/ExploreClient';
 
-export default async function ExplorePage() {
-   // 預設抓取 Popular Anime 以供初始渲染，讓網格瞬間出現
+export default async function ExplorePage({
+   searchParams,
+}: {
+   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+   const resolvedParams = await searchParams;
+   const genre = (resolvedParams.genre as string) || '';
+   const status = (resolvedParams.status as string) || '';
+   const q = (resolvedParams.q as string) || '';
+
+   let url = `https://api.jikan.moe/v4/anime?limit=24&page=1&order_by=popularity&sort=asc`;
+   if (genre) url += `&genres=${genre}`;
+   if (status) url += `&status=${status}`;
+   if (q) url += `&q=${encodeURIComponent(q)}`;
+
+   // 抓取初始化資料，讓網格瞬間出現 (包含透過 URL 分享進來的過濾狀態)
    // 使用 next: { revalidate: 3600 } 讓這份資料在背景快取 1 小時，提升載入速度
-   const res = await fetch('https://api.jikan.moe/v4/anime?limit=24&order_by=popularity&sort=asc', {
+   const res = await fetch(url, {
       next: { revalidate: 3600 },
-   });
-   const data = await res.json();
-   const animeList = data.data || [];
+   }).catch(() => null);
+   const data = res?.ok ? await res.json() : null;
+   const animeList = data?.data || [];
 
    return (
       <main className="flex-1 relative min-h-screen max-w-[calc(100vw-66px)] md:max-w-full w-full overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -30,7 +44,13 @@ export default async function ExplorePage() {
          </div>
 
          {/* 互動式客戶端組件 (含 Filter, Search 與 Load More 功能) */}
-         <ExploreClient initialAnime={animeList} />
+         <ExploreClient
+            key={`${genre}-${status}-${q}`} // 確保瀏覽器上一頁/下一頁時，組件能完美重置並同步狀態
+            initialAnime={animeList}
+            initialGenre={genre}
+            initialStatus={status}
+            initialQuery={q}
+         />
       </main>
    );
 }
