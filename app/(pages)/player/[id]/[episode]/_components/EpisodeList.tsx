@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
    IoPlayCircle,
@@ -9,9 +9,10 @@ import {
    IoTrashOutline,
    IoServerOutline,
 } from 'react-icons/io5';
+import type { PlaylistEpisode } from '@/lib/types/anime';
 
 interface EpisodeListProps {
-   episodes: any[];
+   episodes: PlaylistEpisode[];
    currentEpNumber: string;
    malId: string;
    isDrawer?: boolean;
@@ -26,11 +27,16 @@ export default function EpisodeList({
    onClose,
 }: EpisodeListProps) {
    const [search, setSearch] = useState('');
-   const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+   const [historyVersion, setHistoryVersion] = useState(0);
    const [server, setServer] = useState('auto');
 
-   // 讀取 LocalStorage 中看過的集數
-   useEffect(() => {
+   const watchedEps = useMemo(() => {
+      if (typeof window === 'undefined') {
+         return new Set<string>();
+      }
+      // Access revision value so memo intentionally recomputes after manual clears.
+      void historyVersion;
+
       const watched = new Set<string>();
       episodes.forEach((ep) => {
          if (
@@ -39,8 +45,8 @@ export default function EpisodeList({
             watched.add(ep.number.toString());
          }
       });
-      setWatchedEps(watched);
-   }, [episodes, malId]);
+      return watched;
+   }, [episodes, historyVersion, malId]);
 
    // 根據集數或標題過濾
    const filteredEpisodes = episodes.filter(
@@ -61,7 +67,7 @@ export default function EpisodeList({
                `zen-stream-progress-${malId}-ep${ep.number}`,
             );
          });
-         setWatchedEps(new Set());
+         setHistoryVersion((prev) => prev + 1);
       }
    };
 
@@ -70,12 +76,12 @@ export default function EpisodeList({
          className={
             isDrawer
                ? /* 手機版優化：縮窄側邊欄寬度 (w-[80vw] max-w-[320px]) 避免擋住整個影片 */
-                 'absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-[380px] h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-[9999] flex flex-col pointer-events-auto transition-transform'
-               : 'w-full lg:w-[400px] shrink-0 flex flex-col h-[500px] lg:h-full bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
+                 'absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-95 h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-9999 flex flex-col pointer-events-auto transition-transform'
+               : 'w-full lg:w-100 shrink-0 flex flex-col h-125 lg:h-full bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
          }
       >
          <div className="px-6 py-5 border-b border-white/10 bg-black/40 relative overflow-hidden shrink-0">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-anime-primary to-transparent opacity-50" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-anime-primary to-transparent opacity-50" />
 
             <div className="flex justify-between items-center mb-5 mt-1">
                <h3 className="text-xl font-black text-white flex items-center gap-3">
@@ -168,7 +174,7 @@ export default function EpisodeList({
          {/* 加入 overscroll-contain 防止手機端滑動穿透，並針對桌面端加寬捲動條 (md:w-2) */}
          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 overscroll-contain [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:w-1.5 md:[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20 transition-all">
             {filteredEpisodes.length > 0 ? (
-               filteredEpisodes.map((ep: any) => {
+               filteredEpisodes.map((ep) => {
                   const isCurrent = ep.number.toString() === currentEpNumber;
                   const isWatched = watchedEps.has(ep.number.toString());
                   return (
@@ -177,13 +183,13 @@ export default function EpisodeList({
                         key={ep.id}
                         className={`relative flex items-center gap-4 p-3 md:p-4 rounded-xl transition-all duration-300 group overflow-hidden ${
                            isCurrent
-                              ? 'bg-gradient-to-r from-anime-primary/20 to-anime-primary/5 border border-anime-primary/30 shadow-[0_4px_20px_rgba(160,124,254,0.15)]'
+                              ? 'bg-linear-to-r from-anime-primary/20 to-anime-primary/5 border border-anime-primary/30 shadow-[0_4px_20px_rgba(160,124,254,0.15)]'
                               : isWatched
                                 ? 'bg-black/40 border border-white/5 opacity-60 hover:opacity-100 hover:bg-white/10 grayscale-[0.3]'
                                 : 'bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10'
                         }`}
                      >
-                        <div className="absolute inset-0 bg-gradient-to-br from-anime-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-linear-to-br from-anime-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         {isCurrent && (
                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-anime-primary shadow-[0_0_15px_rgba(160,124,254,1)] rounded-l-xl" />
                         )}

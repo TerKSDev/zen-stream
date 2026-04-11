@@ -9,8 +9,8 @@ export default function SideNav() {
    const pathname = usePathname();
 
    return (
-      <nav className="min-h-screen sticky top-0 left-0 flex flex-col items-center gap-8 min-w-fit px-3 py-6 max-w-fit z-50 bg-[#0B0E14] justify-between border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.4)]">
-         <div className="relative w-8.5 h-8.5 flex items-center justify-center">
+      <nav className="sticky top-0 left-0 z-50 flex h-screen w-14 shrink-0 flex-col items-center justify-between gap-6 border-r border-white/5 bg-[#0B0E14] px-2 py-4 shadow-[4px_0_24px_rgba(0,0,0,0.4)] sm:w-16 sm:gap-8 sm:px-3 sm:py-6">
+         <div className="relative flex h-8 w-8 items-center justify-center sm:h-8.5 sm:w-8.5">
             <div className="absolute inset-0 rounded-full border-[3px] border-slate-200 border-t-transparent rotate-45 box-border group-hover:border-indigo-400 transition-colors"></div>
             <div
                className="w-0 h-0 ml-1"
@@ -30,7 +30,7 @@ export default function SideNav() {
                      key={route.name}
                      href={route.path}
                      title={route.name}
-                     className={`relative rounded-xl transition-all duration-300 w-10 h-10 flex items-center justify-center group ${
+                     className={`relative rounded-xl transition-all duration-300 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center group ${
                         isActive
                            ? 'bg-anime-primary/10 shadow-[inset_0_0_12px_rgba(160,124,254,0.1)]'
                            : 'text-slate-400 hover:bg-white/5 hover:text-white hover:scale-110'
@@ -38,11 +38,10 @@ export default function SideNav() {
                   >
                      {/* Active Indicator Line */}
                      {isActive && (
-                        <div className="absolute -left-3 w-1 h-5 bg-anime-primary rounded-r-full shadow-[0_0_8px_rgba(160,124,254,0.8)]" />
+                        <div className="absolute -left-2 sm:-left-3 w-1 h-5 bg-anime-primary rounded-r-full shadow-[0_0_8px_rgba(160,124,254,0.8)]" />
                      )}
                      <route.icon
-                        className={`transition-all duration-300 ${isActive ? 'text-anime-primary drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]' : 'group-hover:text-white'}`}
-                        size={20}
+                        className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 ${isActive ? 'text-anime-primary drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]' : 'group-hover:text-white'}`}
                      />
                   </Link>
                );
@@ -53,12 +52,9 @@ export default function SideNav() {
             <Link
                href={ROUTES[0].path}
                title="Sign In"
-               className="relative rounded-xl transition-all duration-300 w-10 h-10 flex items-center justify-center group text-slate-400 hover:bg-white/5 hover:text-white hover:scale-110"
+               className="relative rounded-xl transition-all duration-300 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center group text-slate-400 hover:bg-white/5 hover:text-white hover:scale-110"
             >
-               <IoLogInOutline
-                  className="transition-all duration-300 group-hover:text-anime-primary group-hover:drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]"
-                  size={24}
-               />
+               <IoLogInOutline className="h-5 w-5 sm:h-6 sm:w-6 transition-all duration-300 group-hover:text-anime-primary group-hover:drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]" />
             </Link>
          </div>
       </nav>

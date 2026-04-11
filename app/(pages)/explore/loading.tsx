@@ -2,7 +2,10 @@ import { IoCompassOutline } from 'react-icons/io5';
 
 export default function ExploreLoading() {
    return (
-      <main className="flex-1 relative min-h-screen max-w-[calc(100vw-66px)] md:max-w-full w-full overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <main
+         data-header-scroll-container="true"
+         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
          {/* 頂部 Header 骨架 */}
          <div className="relative pt-24 pb-8 px-6 md:px-8 lg:px-12 z-10">
             <div className="flex items-center gap-3 mb-2">
@@ -21,7 +24,7 @@ export default function ExploreLoading() {
                {[...Array(24)].map((_, i) => (
                   <div
                      key={i}
-                     className="w-full aspect-[3/4] rounded-xl bg-white/5 border border-white/10 animate-pulse shadow-lg"
+                     className="w-full aspect-3/4 rounded-xl bg-white/5 border border-white/10 animate-pulse shadow-lg"
                   />
                ))}
             </div>

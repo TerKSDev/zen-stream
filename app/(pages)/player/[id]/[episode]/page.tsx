@@ -7,6 +7,15 @@ import { fetchVideoStream } from '@/app/_actions/anime';
 import EpisodeList from './_components/EpisodeList';
 import AnimeRecommendations from '@/app/(pages)/anime/[mal_id]/_components/AnimeRecommendations';
 import ShareButton from './_components/ShareButton';
+import type {
+   AniListMediaResponse,
+   AnimeDetail,
+   EpisodeData,
+   JikanListResponse,
+   JikanSingleResponse,
+   PlaylistEpisode,
+   RecommendationData,
+} from '@/lib/types/anime';
 
 // ==========================================
 // 異步抓取器：專門負責等水母抓影片 (不會阻塞主頁面渲染)
@@ -22,7 +31,7 @@ async function StreamFetcher({
    currentEpNumber: string;
    malId: string;
    bgImage: string;
-   episodes: any[];
+   episodes: PlaylistEpisode[];
 }) {
    const streamData = await fetchVideoStream(searchQuery, currentEpNumber);
    const streamUrl = streamData.success ? streamData.videoUrl : null;
@@ -84,7 +93,7 @@ function VideoSkeleton({ bgImage }: { bgImage: string }) {
                className="object-cover opacity-30 blur-xl scale-110"
             />
          )}
-         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E14] via-black/40 to-black/40" />
+         <div className="absolute inset-0 bg-linear-to-t from-[#0B0E14] via-black/40 to-black/40" />
          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6">
             <div className="relative flex items-center justify-center w-20 h-20">
                <div className="absolute inset-0 border-4 border-white/5 rounded-full"></div>
@@ -121,7 +130,8 @@ export default async function AnimeWatchPage({
 
    // 1. Fetch anime details (極快)
    const jikanRes = await fetch(`https://api.jikan.moe/v4/anime/${malId}`);
-   const jikanData = await jikanRes.json();
+   const jikanData =
+      (await jikanRes.json()) as JikanSingleResponse<AnimeDetail>;
    const anime = jikanData.data;
 
    if (!anime) {
@@ -167,17 +177,21 @@ export default async function AnimeWatchPage({
       `https://api.jikan.moe/v4/anime/${malId}/recommendations`,
    ).catch(() => null);
    const recommendationsData = recommendationsRes?.ok
-      ? await recommendationsRes.json()
+      ? ((await recommendationsRes.json()) as JikanListResponse<RecommendationData>)
       : null;
    const recommendations = recommendationsData?.data || [];
 
    const anilistRes = await anilistPromise;
-   const anilistData = anilistRes?.ok ? await anilistRes.json() : null;
+   const anilistData = anilistRes?.ok
+      ? ((await anilistRes.json()) as AniListMediaResponse)
+      : null;
    const media = anilistData?.data?.Media;
    const bannerImage = media?.bannerImage;
 
-   const episodesData = episodesRes?.ok ? await episodesRes.json() : null;
-   let rawEpisodes = episodesData?.data || [];
+   const episodesData = episodesRes?.ok
+      ? ((await episodesRes.json()) as JikanListResponse<EpisodeData>)
+      : null;
+   let rawEpisodes: EpisodeData[] = episodesData?.data || [];
 
    if (rawEpisodes.length === 0 && media) {
       const airedCount = media.nextAiringEpisode
@@ -187,7 +201,7 @@ export default async function AnimeWatchPage({
          rawEpisodes = Array.from({ length: airedCount }, (_, i) => {
             const epNum = i + 1;
             const streamEp = media.streamingEpisodes?.find(
-               (ep: any) =>
+               (ep) =>
                   ep.title.startsWith(`Episode ${epNum} `) ||
                   ep.title === `Episode ${epNum}`,
             );
@@ -202,7 +216,7 @@ export default async function AnimeWatchPage({
       }
    }
 
-   const episodes = rawEpisodes.map((ep: any) => ({
+   const episodes: PlaylistEpisode[] = rawEpisodes.map((ep) => ({
       id: ep.mal_id.toString(),
       number: ep.mal_id,
       title: ep.title,
@@ -211,10 +225,10 @@ export default async function AnimeWatchPage({
    // 3. 準備水母的搜尋關鍵字
    const displayTitle = anime.title_english || anime.title;
    const zhTitleObj = anime.titles?.find(
-      (t: any) =>
-         t.type === 'Simplified Chinese' ||
-         t.type === 'Traditional Chinese' ||
-         t.type === 'Mandarin',
+      (title) =>
+         title.type === 'Simplified Chinese' ||
+         title.type === 'Traditional Chinese' ||
+         title.type === 'Mandarin',
    );
    const rawQuery =
       zhTitleObj?.title ||
@@ -226,7 +240,7 @@ export default async function AnimeWatchPage({
       .trim();
 
    const currentEpisodeData = episodes.find(
-      (ep: any) => ep.number.toString() === currentEpNumber,
+      (ep) => ep.number.toString() === currentEpNumber,
    ) || { number: currentEpNumber, title: `Episode ${currentEpNumber}` };
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
 
@@ -243,7 +257,7 @@ export default async function AnimeWatchPage({
                />
             )}
          </div>
-         <div className="absolute inset-0 bg-gradient-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
+         <div className="absolute inset-0 bg-linear-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
 
          <header className="relative z-10 w-full px-6 md:px-8 py-6 pt-8 lg:pt-10 flex items-center justify-between shrink-0 mt-14">
             <Link
@@ -289,23 +303,26 @@ export default async function AnimeWatchPage({
                            </span>
                            <span className="text-base text-slate-300 font-medium">
                               {currentEpisodeData?.title &&
-                              currentEpisodeData.title !== `Episode ${currentEpNumber}`
+                              currentEpisodeData.title !==
+                                 `Episode ${currentEpNumber}`
                                  ? currentEpisodeData.title
                                  : 'Official Stream'}
                            </span>
                         </div>
                      </div>
-                     
+
                      {/* 分享按鈕 */}
                      <div className="flex items-center shrink-0">
-                        <ShareButton title={`${displayTitle} - Episode ${currentEpNumber} | ZenStream`} />
+                        <ShareButton
+                           title={`${displayTitle} - Episode ${currentEpNumber} | ZenStream`}
+                        />
                      </div>
                   </div>
 
                   {/* 豐富化的簡介資訊卡 */}
                   <div className="mt-2 p-4 md:p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl transform-gpu shadow-lg flex gap-4 md:gap-6">
                      {/* 左側：動漫海報 (在極小螢幕上隱藏以節省空間) */}
-                     <div className="relative w-24 sm:w-32 md:w-36 aspect-[3/4] shrink-0 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 hidden sm:block">
+                     <div className="relative w-24 sm:w-32 md:w-36 aspect-3/4 shrink-0 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 hidden sm:block">
                         <Image
                            src={anime.images?.webp?.large_image_url || bgImage}
                            alt={anime.title}
@@ -344,7 +361,7 @@ export default async function AnimeWatchPage({
 
                         {/* 類型標籤 (Genres) */}
                         <div className="flex flex-wrap gap-1.5 mb-3 md:mb-4">
-                           {anime.genres?.map((genre: any) => (
+                           {anime.genres?.map((genre) => (
                               <span
                                  key={genre.mal_id}
                                  className="text-[10px] md:text-[11px] text-slate-300 border border-white/10 bg-black/20 px-2.5 py-0.5 rounded-full whitespace-nowrap"

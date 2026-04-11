@@ -25,9 +25,12 @@ export default async function ExplorePage({
    const animeList = data?.data || [];
 
    return (
-      <main className="flex-1 relative min-h-screen max-w-[calc(100vw-66px)] md:max-w-full w-full overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <main
+         data-header-scroll-container="true"
+         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
          {/* 標題 Header 區塊 */}
-         <div className="relative pt-24 pb-6 px-6 md:px-8 lg:px-12 bg-gradient-to-b from-[#0B0E14] via-[#0B0E14]/90 to-transparent z-10">
+         <div className="relative pt-24 pb-6 px-6 md:px-8 lg:px-12 bg-linear-to-b from-[#0B0E14] via-[#0B0E14]/90 to-transparent z-10">
             <div className="flex items-center gap-3 mb-2">
                <IoCompassOutline
                   className="text-anime-primary drop-shadow-[0_0_15px_rgba(160,124,254,0.6)]"

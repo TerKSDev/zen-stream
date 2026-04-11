@@ -6,7 +6,7 @@ export default async function HomePage() {
    const data = await getSeasonAnime(18);
 
    return (
-      <main className="flex-1 relative h-screen max-w-[calc(100vw-66px)] w-full overflow-hidden bg-[#0B0E14]">
+      <main className="flex-1 relative h-screen w-full min-w-0 overflow-hidden bg-[#0B0E14]">
          {data && data.length > 0 ? (
             <SlideShow animes={data} />
          ) : (

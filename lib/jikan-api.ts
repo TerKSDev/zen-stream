@@ -1,6 +1,12 @@
+import type {
+   AniListBannerLookupResponse,
+   AnimeCard,
+   JikanListResponse,
+} from '@/lib/types/anime';
+
 // lib/api.ts
 export async function fetchJikan(url: string) {
-   let retries = 4;
+   const retries = 4;
    let delay = 2000;
 
    for (let i = 0; i < retries; i++) {
@@ -19,24 +25,11 @@ export async function fetchJikan(url: string) {
 
          return null;
       } catch (error) {
+         console.error('Fetch error:', error);
          return null;
       }
    }
    return null;
-}
-
-interface AnimeProps {
-   mal_id: number;
-   title: string;
-   title_english: string;
-   images: {
-      webp: {
-         large_image_url: string;
-      };
-   };
-   score: number;
-   members: number;
-   bannerImage?: string | null; // 新增背景大圖屬性
 }
 
 // 輔助函數：透過 mal_id 陣列批量向 AniList 獲取背景大圖
@@ -64,11 +57,13 @@ async function fetchAniListBanners(
          body: JSON.stringify({ query, variables: { in: malIds } }),
          next: { revalidate: 86400 }, // 快取一天
       });
-      const result = await res.json();
+      const result = (await res.json()) as AniListBannerLookupResponse;
 
       const bannerMap: Record<number, string> = {};
-      result?.data?.Page?.media?.forEach((m: any) => {
-         if (m.idMal && m.bannerImage) bannerMap[m.idMal] = m.bannerImage;
+      result.data?.Page?.media?.forEach((mediaItem) => {
+         if (mediaItem.idMal && mediaItem.bannerImage) {
+            bannerMap[mediaItem.idMal] = mediaItem.bannerImage;
+         }
       });
       return bannerMap;
    } catch (error) {
@@ -77,7 +72,7 @@ async function fetchAniListBanners(
    }
 }
 
-export async function getTopAnime(count: number): Promise<AnimeProps[]> {
+export async function getTopAnime(count: number): Promise<AnimeCard[]> {
    const res = await fetch(
       `https://api.jikan.moe/v4/top/anime?limit=${count}`,
       {
@@ -97,8 +92,8 @@ export async function getTopAnime(count: number): Promise<AnimeProps[]> {
       throw new Error('Failed to fetch data: ' + res.statusText);
    }
 
-   const result = await res.json();
-   const animes = result.data as AnimeProps[];
+   const result = (await res.json()) as JikanListResponse<AnimeCard>;
+   const animes = result.data || [];
 
    // 批量獲取背景圖並合併資料
    const bannerMap = await fetchAniListBanners(animes.map((a) => a.mal_id));
@@ -108,7 +103,7 @@ export async function getTopAnime(count: number): Promise<AnimeProps[]> {
    }));
 }
 
-export async function getSeasonAnime(count: number): Promise<AnimeProps[]> {
+export async function getSeasonAnime(count: number): Promise<AnimeCard[]> {
    try {
       const res = await fetch(
          `https://api.jikan.moe/v4/seasons/now?limit=${count}&order_by=members&sort=desc&filter=tv`,
@@ -129,8 +124,8 @@ export async function getSeasonAnime(count: number): Promise<AnimeProps[]> {
          throw new Error('Failed to fetch data: ' + res.statusText);
       }
 
-      const result = await res.json();
-      const animes = result.data as AnimeProps[];
+      const result = (await res.json()) as JikanListResponse<AnimeCard>;
+      const animes = result.data || [];
 
       // 批量獲取背景圖並合併資料
       const bannerMap = await fetchAniListBanners(animes.map((a) => a.mal_id));

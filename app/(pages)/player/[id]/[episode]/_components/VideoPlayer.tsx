@@ -6,6 +6,7 @@ import Hls from 'hls.js';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import EpisodeList from './EpisodeList';
+import type { PlaylistEpisode } from '@/lib/types/anime';
 
 interface VideoPlayerProps {
    videoUrl: string;
@@ -13,7 +14,7 @@ interface VideoPlayerProps {
    storageKey?: string;
    malId: string;
    currentEpNumber: string;
-   episodes: any[];
+   episodes: PlaylistEpisode[];
    thumbnailUrl?: string; // 預留給未來 API 提供的縮圖拼圖 (Sprite Sheet) 網址
 }
 
@@ -185,7 +186,7 @@ export default function VideoPlayer({
                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="text-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
                         </div>
                      </div>
-                     <div class="flex flex-col min-w-[120px] max-w-[200px]">
+                     <div class="flex flex-col min-w-30 max-w-50">
                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Up Next</span>
                         <span class="text-sm text-white font-bold line-clamp-1">${nextEp.title || `Episode ${nextEp.number}`}</span>
                      </div>
@@ -336,6 +337,7 @@ export default function VideoPlayer({
       router,
       prevEp,
       nextEp,
+      thumbnailUrl,
    ]);
 
    return (

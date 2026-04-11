@@ -6,6 +6,13 @@ import { fetchJikan } from '@/lib/jikan-api';
 import AnimeEpisodes from './_components/AnimeEpisodes';
 import AnimeRecommendations from './_components/AnimeRecommendations';
 import AnimeCharacters from './_components/AnimeCharacters';
+import type {
+   AniListMediaResponse,
+   AnimeDetail,
+   CharacterData,
+   EpisodeData,
+   RecommendationData,
+} from '@/lib/types/anime';
 
 export default async function AnimeDetailPage({
    params,
@@ -19,7 +26,7 @@ export default async function AnimeDetailPage({
    const jikanData = await fetchJikan(
       `https://api.jikan.moe/v4/anime/${mal_id}/full`,
    );
-   const anime = jikanData?.data;
+   const anime = jikanData?.data as AnimeDetail | undefined;
 
    if (!anime) {
       return (
@@ -54,7 +61,7 @@ export default async function AnimeDetailPage({
          'Content-Type': 'application/json',
          Accept: 'application/json',
       },
-      body: JSON.stringify({ query, variables: { id: parseInt(mal_id) } }),
+      body: JSON.stringify({ query, variables: { id: parseInt(mal_id, 10) } }),
       cache: 'no-store',
    }).catch(() => null);
 
@@ -77,16 +84,22 @@ export default async function AnimeDetailPage({
    );
 
    const anilistRes = await anilistPromise;
-   const anilistData = anilistRes?.ok ? await anilistRes.json() : null;
+   const anilistData = anilistRes?.ok
+      ? ((await anilistRes.json()) as AniListMediaResponse)
+      : null;
    const media = anilistData?.data?.Media;
    const bannerImage = media?.bannerImage;
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
 
    // 取得最終資料陣列
-   let episodes = episodesData?.data || [];
+   let episodes = (episodesData?.data || []) as EpisodeData[];
    // 限制最多顯示 20 個角色，避免畫面過於冗長
-   const characters = charactersData?.data?.slice(0, 20) || [];
-   const recommendations = recommendationsData?.data || [];
+   const characters = ((charactersData?.data || []) as CharacterData[]).slice(
+      0,
+      20,
+   );
+   const recommendations = (recommendationsData?.data ||
+      []) as RecommendationData[];
 
    // 🚨 防呆機制：如果 Jikan 找不到 Episode，改用 AniList 的資料來補齊
    if (episodes.length === 0 && media) {
@@ -98,7 +111,7 @@ export default async function AnimeDetailPage({
          episodes = Array.from({ length: airedCount }, (_, i) => {
             const epNum = i + 1;
             const streamEp = media.streamingEpisodes?.find(
-               (ep: any) =>
+               (ep) =>
                   ep.title.startsWith(`Episode ${epNum} `) ||
                   ep.title === `Episode ${epNum}`,
             );
@@ -116,7 +129,10 @@ export default async function AnimeDetailPage({
    }
 
    return (
-      <main className="flex-1 relative h-full min-h-screen w-full overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <main
+         data-header-scroll-container="true"
+         className="flex-1 relative h-full min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
          {/* 沉浸式頂部橫幅背景 */}
          <div className="absolute top-0 left-0 w-full h-[55vh] lg:h-[65vh] z-0 pointer-events-none">
             <Image
@@ -133,10 +149,10 @@ export default async function AnimeDetailPage({
          {/* 滾動內容容器 */}
          <div className="relative z-10 w-full py-26">
             {/* 主要詳細資訊區塊 */}
-            <div className="px-6 md:px-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-10 lg:gap-14">
+            <div className="px-4 sm:px-6 md:px-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-10 lg:gap-14">
                {/* 左側：海報與播放按鈕 */}
-               <div className="flex flex-col gap-6 items-center lg:items-start">
-                  <div className="relative w-56 lg:w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] ring-1 ring-white/10 group">
+               <div className="flex min-w-0 flex-col gap-6 items-center lg:items-start">
+                  <div className="relative w-56 lg:w-full aspect-3/4 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] ring-1 ring-white/10 group">
                      <Image
                         src={anime.images.webp.large_image_url}
                         alt={anime.title}
@@ -160,7 +176,7 @@ export default async function AnimeDetailPage({
                            Related Media
                         </h3>
                         <div className="flex flex-col gap-4">
-                           {anime.relations.map((rel: any, idx: number) => (
+                           {anime.relations.map((rel, idx: number) => (
                               <div
                                  key={idx}
                                  className="flex flex-col gap-2 border-b border-white/5 pb-4 last:border-0 last:pb-0"
@@ -168,8 +184,8 @@ export default async function AnimeDetailPage({
                                  <span className="text-[11px] text-anime-primary uppercase tracking-wider font-bold">
                                     {rel.relation}
                                  </span>
-                                 <div className="flex flex-wrap gap-2">
-                                    {rel.entry.map((entry: any) => (
+                                 <div className="flex min-w-0 flex-wrap gap-2">
+                                    {rel.entry.map((entry) => (
                                        <Link
                                           key={entry.mal_id}
                                           href={
@@ -177,7 +193,7 @@ export default async function AnimeDetailPage({
                                                 ? `/anime/${entry.mal_id}`
                                                 : '#'
                                           }
-                                          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all duration-300 ${
+                                          className={`max-w-full wrap-break-word whitespace-normal text-xs px-2.5 py-1.5 rounded-lg border transition-all duration-300 ${
                                              entry.type === 'anime'
                                                 ? 'bg-white/5 border-white/10 text-slate-200 hover:bg-anime-primary/20 hover:border-anime-primary/50 hover:text-white hover:shadow-[0_0_10px_rgba(160,124,254,0.2)]'
                                                 : 'bg-transparent border-transparent text-slate-500 hover:text-slate-400 cursor-default pointer-events-none'
@@ -200,13 +216,13 @@ export default async function AnimeDetailPage({
                </div>
 
                {/* 右側：詳細資訊 */}
-               <div className="flex flex-col gap-5 mt-4 lg:mt-0 text-center lg:text-left">
+               <div className="mt-4 flex min-w-0 flex-col gap-5 text-center lg:mt-0 lg:text-left">
                   <div>
-                     <h1 className="text-3xl md:text-5xl font-black text-white drop-shadow-lg leading-tight">
+                     <h1 className="wrap-break-word text-3xl md:text-5xl font-black text-white drop-shadow-lg leading-tight">
                         {anime.title_english || anime.title}
                      </h1>
                      {anime.title_japanese && (
-                        <h2 className="text-lg md:text-xl text-slate-400 font-medium tracking-wide mt-2">
+                        <h2 className="mt-2 wrap-break-word text-lg md:text-xl text-slate-400 font-medium tracking-wide">
                            {anime.title_japanese}
                         </h2>
                      )}
@@ -244,7 +260,7 @@ export default async function AnimeDetailPage({
 
                   {/* 類型標籤 (Genres) */}
                   <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-2">
-                     {anime.genres?.map((genre: any) => (
+                     {anime.genres?.map((genre) => (
                         <span
                            key={genre.mal_id}
                            className="text-xs md:text-sm px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white/80 hover:bg-anime-primary/40 hover:text-white transition-colors cursor-default"
@@ -271,8 +287,9 @@ export default async function AnimeDetailPage({
                            Studios
                         </span>
                         <span className="text-sm text-slate-200 line-clamp-2">
-                           {anime.studios?.map((s: any) => s.name).join(', ') ||
-                              'Unknown'}
+                           {anime.studios
+                              ?.map((studio) => studio.name)
+                              .join(', ') || 'Unknown'}
                         </span>
                      </div>
                      <div className="flex flex-col gap-1.5">
