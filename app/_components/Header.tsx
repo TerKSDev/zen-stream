@@ -2,7 +2,7 @@
 
 import { PATHS } from '@/lib/config/route';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { IoCloseCircle, IoSearch } from 'react-icons/io5';
 
 const SCROLL_CONTAINER_SELECTOR = '[data-header-scroll-container="true"]';
@@ -65,38 +65,35 @@ export default function Header() {
       };
    }, [pathname, searchParamsKey]);
 
-   const searchUrl = useMemo(() => {
-      const params = new URLSearchParams();
+   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
       const trimmed = query.trim();
+      let params: URLSearchParams;
 
       if (pathname === PATHS.EXPLORE) {
-         const genre = searchParams.get('genre');
-         const status = searchParams.get('status');
-         if (genre) params.set('genre', genre);
-         if (status) params.set('status', status);
+         // Read from window.location.search to ensure we get the latest client-side filters
+         params = new URLSearchParams(window.location.search);
+      } else {
+         params = new URLSearchParams();
       }
 
       if (trimmed) {
          params.set('q', trimmed);
+      } else {
+         params.delete('q');
       }
 
       const queryString = params.toString();
-      return queryString ? `${PATHS.EXPLORE}?${queryString}` : PATHS.EXPLORE;
-   }, [pathname, query, searchParams]);
-
-   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      router.push(searchUrl);
+      router.push(
+         queryString ? `${PATHS.EXPLORE}?${queryString}` : PATHS.EXPLORE,
+      );
    };
 
    const handleClear = () => {
       setQuery('');
       if (pathname === PATHS.EXPLORE) {
-         const params = new URLSearchParams();
-         const genre = searchParams.get('genre');
-         const status = searchParams.get('status');
-         if (genre) params.set('genre', genre);
-         if (status) params.set('status', status);
+         const params = new URLSearchParams(window.location.search);
+         params.delete('q');
 
          const queryString = params.toString();
          router.push(
@@ -107,9 +104,9 @@ export default function Header() {
 
    return (
       <header
-         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-4 transition-all duration-300 sm:px-8 sm:py-6 ${
+         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-300 sm:px-8 sm:py-4 ${
             hasScrollableContent
-               ? 'bg-[#0B0E14]/20 backdrop-blur-[3px] border-b border-white/5'
+               ? 'bg-[#0B0E14] border-b border-white/10'
                : 'bg-transparent'
          }`}
       >

@@ -27,29 +27,25 @@ html {
 }
 
 ::-webkit-scrollbar {
-   width: 6px; /* 縱向捲軸寬度 */
-   height: 6px; /* 橫向捲軸高度 */
+   width: 5px; /* 縱向捲軸寬度 */
+   height: 5px; /* 橫向捲軸高度 */
 }
 
 ::-webkit-scrollbar-track {
-   background: rgba(0, 0, 0, 0.3); /* 軌道顏色：深色半透明 */
-   border-radius: 0px; /* 堅持你的規則：不使用圓角 */
+   background: trasparent; /* 軌道顏色：深色半透明 */
 }
 
 ::-webkit-scrollbar-thumb {
-   background: #0891b2; /* 你的專屬青色 */
-   /* JRPG 風格：給捲軸一個微弱的霓虹發光感 */
-   box-shadow: 0 0 10px rgba(8, 145, 178, 0.5);
-   border-radius: 0px;
+   background: transparent; /* 滑塊顏色：深色半透明 */
+   border-radius: 10px; /* 圓角 */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-   background: #22d3ee; /* Hover 時變亮 */
-   box-shadow: 0 0 15px rgba(34, 211, 238, 0.8);
+   background: #9171e7ee; /* Hover 時變亮 */
 }
 
 /* 針對 Firefox */
 * {
    scrollbar-width: thin;
-   scrollbar-color: #0891b2 rgba(0, 0, 0, 0.3);
+   scrollbar-color: #9171e7 rgba(0, 0, 0, 0);
 }
