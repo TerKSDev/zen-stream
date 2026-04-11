@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { IoPlayCircle, IoSearch, IoClose } from 'react-icons/io5';
 
@@ -20,6 +20,20 @@ export default function EpisodeList({
    onClose,
 }: EpisodeListProps) {
    const [search, setSearch] = useState('');
+   const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+
+   // 讀取 LocalStorage 中看過的集數
+   useEffect(() => {
+      const watched = new Set<string>();
+      episodes.forEach((ep) => {
+         if (
+            localStorage.getItem(`zen-stream-progress-${malId}-ep${ep.number}`)
+         ) {
+            watched.add(ep.number.toString());
+         }
+      });
+      setWatchedEps(watched);
+   }, [episodes, malId]);
 
    // 根據集數或標題過濾
    const filteredEpisodes = episodes.filter(
@@ -29,9 +43,14 @@ export default function EpisodeList({
    );
 
    return (
-      <div className={isDrawer 
-         ? "absolute top-0 right-0 w-full sm:w-[380px] h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-[9999] flex flex-col pointer-events-auto transition-transform"
-         : "w-full lg:w-[400px] shrink-0 flex flex-col h-[500px] lg:h-full bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5"}>
+      <div
+         className={
+            isDrawer
+               ? /* 手機版優化：縮窄側邊欄寬度 (w-[80vw] max-w-[320px]) 避免擋住整個影片 */
+                 'absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-[380px] h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-[9999] flex flex-col pointer-events-auto transition-transform'
+               : 'w-full lg:w-[400px] shrink-0 flex flex-col h-[500px] lg:h-full bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
+         }
+      >
          <div className="px-6 py-5 border-b border-white/10 bg-black/40 relative overflow-hidden shrink-0">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-anime-primary to-transparent opacity-50" />
 
@@ -45,7 +64,10 @@ export default function EpisodeList({
                      {episodes.length} EPS
                   </span>
                   {isDrawer && (
-                     <button onClick={onClose} className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors">
+                     <button
+                        onClick={onClose}
+                        className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                     >
                         <IoClose size={24} />
                      </button>
                   )}
@@ -72,14 +94,17 @@ export default function EpisodeList({
             {filteredEpisodes.length > 0 ? (
                filteredEpisodes.map((ep: any) => {
                   const isCurrent = ep.number.toString() === currentEpNumber;
+                  const isWatched = watchedEps.has(ep.number.toString());
                   return (
                      <Link
                         href={`/player/${malId}/${ep.number}`}
                         key={ep.id}
                         className={`relative flex items-center gap-4 p-3 md:p-4 rounded-xl transition-all duration-300 group overflow-hidden ${
-                           isCurrent 
-                              ? 'bg-gradient-to-r from-anime-primary/20 to-anime-primary/5 border border-anime-primary/30 shadow-[0_4px_20px_rgba(160,124,254,0.15)]' 
-                              : 'bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10'
+                           isCurrent
+                              ? 'bg-gradient-to-r from-anime-primary/20 to-anime-primary/5 border border-anime-primary/30 shadow-[0_4px_20px_rgba(160,124,254,0.15)]'
+                              : isWatched
+                                ? 'bg-black/40 border border-white/5 opacity-60 hover:opacity-100 hover:bg-white/10 grayscale-[0.3]'
+                                : 'bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10'
                         }`}
                      >
                         <div className="absolute inset-0 bg-gradient-to-br from-anime-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -88,11 +113,18 @@ export default function EpisodeList({
                         )}
                         <div className="flex flex-col flex-1 min-w-0 pl-2 relative z-10">
                            <div className="flex items-center justify-between mb-1.5">
-                              <span
-                                 className={`text-[10px] font-black tracking-widest uppercase ${isCurrent ? 'text-anime-primary drop-shadow-[0_0_5px_rgba(160,124,254,0.5)]' : 'text-slate-500 group-hover:text-anime-primary/80 transition-colors'}`}
-                              >
-                                 Episode {ep.number}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                 <span
+                                    className={`text-[10px] font-black tracking-widest uppercase ${isCurrent ? 'text-anime-primary drop-shadow-[0_0_5px_rgba(160,124,254,0.5)]' : 'text-slate-500 group-hover:text-anime-primary/80 transition-colors'}`}
+                                 >
+                                    Episode {ep.number}
+                                 </span>
+                                 {!isCurrent && isWatched && (
+                                    <span className="text-[9px] font-bold text-slate-400 bg-white/10 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                       Watched
+                                    </span>
+                                 )}
+                              </div>
                               {isCurrent && (
                                  <span className="text-[9px] font-bold text-anime-primary bg-anime-primary/10 px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse border border-anime-primary/20">
                                     Now Playing

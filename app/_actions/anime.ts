@@ -6,7 +6,7 @@ export async function fetchVideoStream(title: string, episode: string) {
          `[Next.js Server] Ready to fetch video: ${title} - Episode ${episode}`,
       );
       const searchRes = await fetch(
-         `http://localhost:3000/api/scrape/search?keyword=${encodeURIComponent(title)}`,
+         `https://kurage-api.onrender.com/api/scrape/search?keyword=${encodeURIComponent(title)}`,
          {
             cache: 'no-store',
          },
@@ -24,7 +24,7 @@ export async function fetchVideoStream(title: string, episode: string) {
 
       const ageUrl = `https://www.agedm.io/play/${targetAnime}/1/${episode}`;
       const videoRes = await fetch(
-         `http://localhost:3000/api/scrape/episode?url=${encodeURIComponent(ageUrl)}`,
+         `https://kurage-api.onrender.com/api/scrape/episode?url=${encodeURIComponent(ageUrl)}`,
          {
             cache: 'no-store',
          },
