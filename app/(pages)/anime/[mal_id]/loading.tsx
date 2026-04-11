@@ -84,6 +84,19 @@ export default function Loading() {
                   </div>
                </div>
             </div>
+
+            {/* 角色與聲優骨架屏 */}
+            <div className="w-full px-6 md:px-8 mt-10 lg:mt-14">
+               <div className="flex items-center gap-3 mb-6">
+                  <div className="w-1.5 h-6 bg-white/10 rounded-full animate-pulse" />
+                  <div className="w-64 h-7 bg-white/10 rounded-md animate-pulse" />
+               </div>
+               <div className="flex overflow-hidden gap-4 pb-4">
+                  {[...Array(5)].map((_, i) => (
+                     <div key={i} className="w-[320px] md:w-[360px] h-24 shrink-0 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+                  ))}
+               </div>
+            </div>
          </div>
       </main>
    );

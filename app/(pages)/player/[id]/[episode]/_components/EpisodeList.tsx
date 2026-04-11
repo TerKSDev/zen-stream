@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { IoPlayCircle, IoSearch, IoClose } from 'react-icons/io5';
+import {
+   IoPlayCircle,
+   IoSearch,
+   IoClose,
+   IoTrashOutline,
+   IoServerOutline,
+} from 'react-icons/io5';
 
 interface EpisodeListProps {
    episodes: any[];
@@ -21,6 +27,7 @@ export default function EpisodeList({
 }: EpisodeListProps) {
    const [search, setSearch] = useState('');
    const [watchedEps, setWatchedEps] = useState<Set<string>>(new Set());
+   const [server, setServer] = useState('auto');
 
    // 讀取 LocalStorage 中看過的集數
    useEffect(() => {
@@ -42,6 +49,22 @@ export default function EpisodeList({
          (ep.title && ep.title.toLowerCase().includes(search.toLowerCase())),
    );
 
+   // 清除觀看紀錄功能
+   const handleClearHistory = () => {
+      if (
+         window.confirm(
+            'Are you sure you want to clear the watch history for this anime?',
+         )
+      ) {
+         episodes.forEach((ep) => {
+            localStorage.removeItem(
+               `zen-stream-progress-${malId}-ep${ep.number}`,
+            );
+         });
+         setWatchedEps(new Set());
+      }
+   };
+
    return (
       <div
          className={
@@ -60,6 +83,17 @@ export default function EpisodeList({
                   Playlist
                </h3>
                <div className="flex items-center gap-3">
+                  {/* 清除觀看紀錄按鈕 */}
+                  {watchedEps.size > 0 && (
+                     <button
+                        onClick={handleClearHistory}
+                        className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-white/5 hover:bg-red-500/20 hover:text-red-400 px-2 py-1 rounded uppercase tracking-wider transition-colors border border-white/5 hover:border-red-500/30"
+                        title="Clear Watched History"
+                     >
+                        <IoTrashOutline size={12} />
+                        Clear
+                     </button>
+                  )}
                   <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">
                      {episodes.length} EPS
                   </span>
@@ -71,6 +105,47 @@ export default function EpisodeList({
                         <IoClose size={24} />
                      </button>
                   )}
+               </div>
+            </div>
+
+            {/* 切換伺服器 (Change Server) */}
+            <div className="relative mb-3 group cursor-pointer">
+               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <IoServerOutline
+                     className="text-slate-400 group-hover:text-anime-primary transition-colors"
+                     size={16}
+                  />
+               </div>
+               <select
+                  value={server}
+                  onChange={(e) => setServer(e.target.value)}
+                  className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-10 text-sm font-bold text-white focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all appearance-none cursor-pointer"
+               >
+                  <option value="auto" className="bg-[#0B0E14] text-white">
+                     Server: Auto (Recommended)
+                  </option>
+                  <option value="backup1" className="bg-[#0B0E14] text-white">
+                     Server: Backup 1
+                  </option>
+                  <option value="backup2" className="bg-[#0B0E14] text-white">
+                     Server: Backup 2
+                  </option>
+               </select>
+               {/* 客製化下拉箭頭 */}
+               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                  <svg
+                     className="w-4 h-4 text-slate-400 group-hover:text-anime-primary transition-colors"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24"
+                  >
+                     <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                     ></path>
+                  </svg>
                </div>
             </div>
 
@@ -90,7 +165,8 @@ export default function EpisodeList({
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/5 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
+         {/* 加入 overscroll-contain 防止手機端滑動穿透，並針對桌面端加寬捲動條 (md:w-2) */}
+         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 overscroll-contain [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:w-1.5 md:[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20 transition-all">
             {filteredEpisodes.length > 0 ? (
                filteredEpisodes.map((ep: any) => {
                   const isCurrent = ep.number.toString() === currentEpNumber;

@@ -5,6 +5,7 @@ import { IoPlayCircle } from 'react-icons/io5';
 import { fetchJikan } from '@/lib/jikan-api';
 import AnimeEpisodes from './_components/AnimeEpisodes';
 import AnimeRecommendations from './_components/AnimeRecommendations';
+import AnimeCharacters from './_components/AnimeCharacters';
 
 export default async function AnimeDetailPage({
    params,
@@ -63,6 +64,12 @@ export default async function AnimeDetailPage({
       `https://api.jikan.moe/v4/anime/${mal_id}/episodes`,
    );
 
+   // 延遲 1500 毫秒後請求角色資料
+   await new Promise((resolve) => setTimeout(resolve, 1500));
+   const charactersData = await fetchJikan(
+      `https://api.jikan.moe/v4/anime/${mal_id}/characters`,
+   );
+
    // 延遲 1500 毫秒後請求推薦動漫
    await new Promise((resolve) => setTimeout(resolve, 1500));
    const recommendationsData = await fetchJikan(
@@ -77,6 +84,8 @@ export default async function AnimeDetailPage({
 
    // 取得最終資料陣列
    let episodes = episodesData?.data || [];
+   // 限制最多顯示 20 個角色，避免畫面過於冗長
+   const characters = charactersData?.data?.slice(0, 20) || [];
    const recommendations = recommendationsData?.data || [];
 
    // 🚨 防呆機制：如果 Jikan 找不到 Episode，改用 AniList 的資料來補齊
@@ -297,6 +306,7 @@ export default async function AnimeDetailPage({
                </div>
             </div>
 
+            <AnimeCharacters characters={characters} />
             <AnimeRecommendations recommendations={recommendations} />
          </div>
       </main>

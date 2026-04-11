@@ -5,6 +5,8 @@ import { IoArrowBack, IoPlayCircle } from 'react-icons/io5';
 import VideoPlayer from './_components/VideoPlayer';
 import { fetchVideoStream } from '@/app/_actions/anime';
 import EpisodeList from './_components/EpisodeList';
+import AnimeRecommendations from '@/app/(pages)/anime/[mal_id]/_components/AnimeRecommendations';
+import ShareButton from './_components/ShareButton';
 
 // ==========================================
 // 異步抓取器：專門負責等水母抓影片 (不會阻塞主頁面渲染)
@@ -159,6 +161,16 @@ export default async function AnimeWatchPage({
       `https://api.jikan.moe/v4/anime/${malId}/episodes`,
    ).catch(() => null);
 
+   // 延遲 800 毫秒後請求推薦動漫，避免觸發 429 Rate Limit
+   await new Promise((resolve) => setTimeout(resolve, 800));
+   const recommendationsRes = await fetch(
+      `https://api.jikan.moe/v4/anime/${malId}/recommendations`,
+   ).catch(() => null);
+   const recommendationsData = recommendationsRes?.ok
+      ? await recommendationsRes.json()
+      : null;
+   const recommendations = recommendationsData?.data || [];
+
    const anilistRes = await anilistPromise;
    const anilistData = anilistRes?.ok ? await anilistRes.json() : null;
    const media = anilistData?.data?.Media;
@@ -266,21 +278,27 @@ export default async function AnimeWatchPage({
 
                {/* Anime Info Below Player */}
                <div className="mt-6 flex flex-col gap-4 shrink-0 pb-12">
-                  <div className="flex flex-col gap-2">
-                     <h1 className="text-3xl md:text-4xl font-black text-white line-clamp-2 drop-shadow-md">
-                        {displayTitle}
-                     </h1>
-                     <div className="flex flex-wrap items-center gap-3 mt-1">
-                        <span className="flex items-center gap-2 text-anime-primary font-bold text-sm bg-anime-primary/10 border border-anime-primary/20 px-3 py-1 rounded-lg shadow-[0_0_10px_rgba(160,124,254,0.1)]">
-                           EPISODE {currentEpNumber}
-                        </span>
-                        <span className="text-base text-slate-300 font-medium">
-                           {currentEpisodeData?.title &&
-                           currentEpisodeData.title !==
-                              `Episode ${currentEpNumber}`
-                              ? currentEpisodeData.title
-                              : 'Official Stream'}
-                        </span>
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                     <div className="flex flex-col gap-2">
+                        <h1 className="text-3xl md:text-4xl font-black text-white line-clamp-2 drop-shadow-md">
+                           {displayTitle}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-3 mt-1">
+                           <span className="flex items-center gap-2 text-anime-primary font-bold text-sm bg-anime-primary/10 border border-anime-primary/20 px-3 py-1 rounded-lg shadow-[0_0_10px_rgba(160,124,254,0.1)]">
+                              EPISODE {currentEpNumber}
+                           </span>
+                           <span className="text-base text-slate-300 font-medium">
+                              {currentEpisodeData?.title &&
+                              currentEpisodeData.title !== `Episode ${currentEpNumber}`
+                                 ? currentEpisodeData.title
+                                 : 'Official Stream'}
+                           </span>
+                        </div>
+                     </div>
+                     
+                     {/* 分享按鈕 */}
+                     <div className="flex items-center shrink-0">
+                        <ShareButton title={`${displayTitle} - Episode ${currentEpNumber} | ZenStream`} />
                      </div>
                   </div>
 
@@ -345,6 +363,11 @@ export default async function AnimeWatchPage({
                               'No synopsis available for this anime.'}
                         </p>
                      </div>
+                  </div>
+
+                  {/* 推薦動漫區塊 */}
+                  <div className="mt-8 -mx-4 sm:mx-0">
+                     <AnimeRecommendations recommendations={recommendations} />
                   </div>
                </div>
             </div>

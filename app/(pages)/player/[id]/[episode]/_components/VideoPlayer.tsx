@@ -14,6 +14,7 @@ interface VideoPlayerProps {
    malId: string;
    currentEpNumber: string;
    episodes: any[];
+   thumbnailUrl?: string; // 預留給未來 API 提供的縮圖拼圖 (Sprite Sheet) 網址
 }
 
 export default function VideoPlayer({
@@ -23,11 +24,13 @@ export default function VideoPlayer({
    malId,
    currentEpNumber,
    episodes,
+   thumbnailUrl,
 }: VideoPlayerProps) {
    const artRef = useRef<HTMLDivElement>(null);
    const router = useRouter();
    const [playerNode, setPlayerNode] = useState<HTMLElement | null>(null);
    const [showDrawer, setShowDrawer] = useState(false);
+   const autoPlayCanceled = useRef(false); // 用來記錄使用者是否取消了自動播放
 
    const currentIndex = episodes.findIndex(
       (ep) => ep.number.toString() === currentEpNumber,
@@ -37,6 +40,7 @@ export default function VideoPlayer({
       currentIndex < episodes.length - 1 ? episodes[currentIndex + 1] : null;
 
    useEffect(() => {
+      autoPlayCanceled.current = false; // 每次切換新集數時，重置取消狀態
       if (!artRef.current) return;
 
       const art = new Artplayer({
@@ -70,6 +74,25 @@ export default function VideoPlayer({
          autoOrientation: true, // 手機旋轉時自動進入全螢幕
          hotkey: true, // 開啟鍵盤快捷鍵 (空白鍵暫停、左右鍵快轉、上下鍵音量)
          theme: '#A07CFE', // 注入你的主題紫，讓播放器進度條發亮
+         // --- 替換預設的 Loading 動畫為科技感光環 ---
+         icons: {
+            loading: `<div class="relative flex items-center justify-center w-16 h-16">
+               <div class="absolute inset-0 border-[3px] border-white/10 rounded-full"></div>
+               <div class="absolute inset-0 border-[3px] border-[#A07CFE] border-t-transparent rounded-full animate-spin"></div>
+               <svg class="absolute text-[#A07CFE]/80 animate-pulse drop-shadow-[0_0_10px_rgba(160,124,254,0.8)]" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+               </svg>
+            </div>`,
+         },
+         // --- 進度條預覽縮圖配置 (Thumbnails) ---
+         // 若未來 API 能抓到縮圖拼圖 (Sprite Sheet)，只要傳入 thumbnailUrl 就會自動生效！
+         ...(thumbnailUrl && {
+            thumbnails: {
+               url: thumbnailUrl,
+               number: 60, // 假設拼圖內總共有 60 張小縮圖 (需根據實際圖片格式調整)
+               column: 10, // 假設排版為 10 欄 (需根據實際圖片格式調整)
+            },
+         }),
          customType: {
             m3u8: function (video, url) {
                if (Hls.isSupported()) {
@@ -145,6 +168,133 @@ export default function VideoPlayer({
 
       window.addEventListener('keydown', handleKeyDown, { capture: true });
 
+      // --- 4. 自動播放下一集 (Auto-play Next Episode) 倒數面板 ---
+      if (nextEp) {
+         art.on('ready', () => {
+            // 建立浮動的「下一集」倒數面板
+            art.layers.add({
+               name: 'next-countdown',
+               html: `
+                  <div class="bg-[#0B0E14]/90 backdrop-blur-md border border-white/10 p-3 pr-4 rounded-2xl flex items-center gap-4 shadow-[0_0_30px_rgba(0,0,0,0.8)] transform transition-all duration-500 translate-y-10 opacity-0 pointer-events-none" id="next-ep-container">
+                     <div class="relative flex items-center justify-center w-12 h-12 shrink-0 cursor-pointer group" id="btn-play-next" title="Play Now">
+                        <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                           <circle class="text-white/10" stroke-width="2.5" stroke="currentColor" fill="transparent" r="16" cx="18" cy="18"/>
+                           <circle id="countdown-ring" class="text-anime-primary transition-all duration-300 ease-linear" stroke-width="2.5" stroke-dasharray="100.5" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="transparent" r="16" cx="18" cy="18"/>
+                        </svg>
+                        <div class="w-9 h-9 bg-white/10 group-hover:bg-anime-primary rounded-full flex items-center justify-center transition-colors">
+                           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="text-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                     </div>
+                     <div class="flex flex-col min-w-[120px] max-w-[200px]">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Up Next</span>
+                        <span class="text-sm text-white font-bold line-clamp-1">${nextEp.title || `Episode ${nextEp.number}`}</span>
+                     </div>
+                     <button id="btn-cancel-next" class="p-2 text-slate-400 hover:text-red-400 hover:bg-white/10 rounded-full transition-colors ml-1" title="Cancel Auto-play">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                     </button>
+                  </div>
+               `,
+               style: {
+                  position: 'absolute',
+                  bottom: '80px',
+                  right: '25px',
+                  zIndex: '50',
+               },
+            });
+
+            const btnPlay =
+               art.template.$player.querySelector('#btn-play-next');
+            const btnCancel =
+               art.template.$player.querySelector('#btn-cancel-next');
+
+            if (btnPlay) {
+               btnPlay.addEventListener('click', () => {
+                  art.notice.show = `Loading EP ${nextEp.number}...`;
+
+                  // 手動點擊播放時，加入較快的平滑淡出
+                  if (art.template.$player) {
+                     art.template.$player.style.transition =
+                        'opacity 0.4s ease-in-out';
+                     art.template.$player.style.opacity = '0';
+                  }
+                  setTimeout(
+                     () => router.push(`/player/${malId}/${nextEp.number}`),
+                     400,
+                  );
+               });
+            }
+            if (btnCancel) {
+               btnCancel.addEventListener('click', () => {
+                  autoPlayCanceled.current = true;
+                  const container =
+                     art.template.$player.querySelector('#next-ep-container');
+                  if (container) {
+                     container.classList.add(
+                        'translate-y-10',
+                        'opacity-0',
+                        'pointer-events-none',
+                     );
+                  }
+                  art.notice.show = 'Auto-play canceled';
+               });
+            }
+         });
+
+         art.on('video:timeupdate', () => {
+            if (autoPlayCanceled.current || !art.duration || art.duration < 20)
+               return;
+
+            const timeLeft = art.duration - art.currentTime;
+            const container =
+               art.template.$player.querySelector('#next-ep-container');
+            const ring = art.template.$player.querySelector(
+               '#countdown-ring',
+            ) as HTMLElement | null;
+
+            // 倒數 15 秒時浮現
+            if (timeLeft <= 15 && timeLeft > 0) {
+               if (container && container.classList.contains('opacity-0')) {
+                  container.classList.remove(
+                     'translate-y-10',
+                     'opacity-0',
+                     'pointer-events-none',
+                  );
+               }
+               if (ring) {
+                  // 計算 SVG 光圈的偏移量 (0 為滿，100.5 為空)，創造倒數消失的效果
+                  const offset = ((15 - timeLeft) / 15) * 100.5;
+                  ring.style.strokeDashoffset = offset.toString();
+               }
+            } else {
+               if (container && !container.classList.contains('opacity-0')) {
+                  container.classList.add(
+                     'translate-y-10',
+                     'opacity-0',
+                     'pointer-events-none',
+                  );
+               }
+            }
+         });
+
+         // 影片播放完畢且沒有被取消時，執行跳轉
+         art.on('video:ended', () => {
+            if (!autoPlayCanceled.current) {
+               art.notice.show = `Auto-playing EP ${nextEp.number}...`;
+
+               // 影片自動結束時，加入較舒緩的平滑淡出
+               if (art.template.$player) {
+                  art.template.$player.style.transition =
+                     'opacity 0.8s ease-in-out';
+                  art.template.$player.style.opacity = '0';
+               }
+               setTimeout(
+                  () => router.push(`/player/${malId}/${nextEp.number}`),
+                  800,
+               );
+            }
+         });
+      }
+
       // --- 記憶播放進度 ---
       if (storageKey) {
          const cacheKey = `zen-stream-progress-${storageKey}`;
@@ -190,6 +340,40 @@ export default function VideoPlayer({
 
    return (
       <>
+         {/* 注入自定義樣式，把 Artplayer 原生的設定面板改成高質感深色毛玻璃 */}
+         <style
+            dangerouslySetInnerHTML={{
+               __html: `
+            .art-video-player .art-setting,
+            .art-video-player .art-contextmenu {
+               background: rgba(11, 14, 20, 0.85) !important;
+               backdrop-filter: blur(20px) !important;
+               -webkit-backdrop-filter: blur(20px) !important;
+               border: 1px solid rgba(255, 255, 255, 0.1) !important;
+               border-radius: 16px !important;
+               padding: 8px !important;
+               box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+            }
+            .art-video-player .art-setting-inner {
+               background: transparent !important;
+            }
+            .art-video-player .art-setting-item,
+            .art-video-player .art-contextmenu-item {
+               transition: all 0.2s ease !important;
+               border-radius: 8px !important;
+               margin-bottom: 2px !important;
+            }
+            .art-video-player .art-setting-item:hover, 
+            .art-video-player .art-contextmenu-item:hover {
+               background-color: rgba(160, 124, 254, 0.2) !important;
+               color: #A07CFE !important;
+            }
+            .art-video-player .art-setting-item.art-current {
+               color: #A07CFE !important;
+            }
+         `,
+            }}
+         />
          <div
             ref={artRef}
             className="w-full aspect-video rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] z-10"
