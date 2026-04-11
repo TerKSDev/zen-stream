@@ -1,9 +1,113 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { IoArrowBack, IoPlayCircle } from 'react-icons/io5';
 import VideoPlayer from './_components/VideoPlayer';
 import { fetchVideoStream } from '@/app/_actions/anime';
+import EpisodeList from './_components/EpisodeList';
 
+// ==========================================
+// 異步抓取器：專門負責等水母抓影片 (不會阻塞主頁面渲染)
+// ==========================================
+async function StreamFetcher({
+   searchQuery,
+   currentEpNumber,
+   malId,
+   bgImage,
+   episodes,
+}: {
+   searchQuery: string;
+   currentEpNumber: string;
+   malId: string;
+   bgImage: string;
+   episodes: any[];
+}) {
+   const streamData = await fetchVideoStream(searchQuery, currentEpNumber);
+   const streamUrl = streamData.success ? streamData.videoUrl : null;
+
+   if (!streamUrl) {
+      return (
+         <>
+            {bgImage && (
+               <Image
+                  src={bgImage}
+                  alt="thumbnail"
+                  fill
+                  className="object-cover opacity-20"
+               />
+            )}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4">
+               <IoPlayCircle
+                  size={72}
+                  className="opacity-50 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"
+               />
+               <div className="flex flex-col items-center gap-1">
+                  <span className="font-black tracking-widest text-lg text-white drop-shadow-md uppercase">
+                     Stream Unavailable
+                  </span>
+                  <span className="text-sm text-slate-400 text-center max-w-md px-4">
+                     {streamData.error ||
+                        'The requested episode could not be loaded.'}
+                  </span>
+               </div>
+            </div>
+         </>
+      );
+   }
+
+   return (
+      <VideoPlayer
+         videoUrl={streamUrl}
+         poster={bgImage}
+         storageKey={`${malId}-ep${currentEpNumber}`}
+         malId={malId}
+         currentEpNumber={currentEpNumber}
+         episodes={episodes}
+      />
+   );
+}
+
+// ==========================================
+// 載入骨架屏：水母正在抓取時顯示的超帥 UI
+// ==========================================
+function VideoSkeleton({ bgImage }: { bgImage: string }) {
+   return (
+      <>
+         {bgImage && (
+            <Image
+               src={bgImage}
+               alt="loading"
+               fill
+               className="object-cover opacity-30 blur-xl scale-110"
+            />
+         )}
+         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E14] via-black/40 to-black/40" />
+         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6">
+            <div className="relative flex items-center justify-center w-20 h-20">
+               <div className="absolute inset-0 border-4 border-white/5 rounded-full"></div>
+               <div className="absolute inset-0 border-4 border-anime-primary border-t-transparent rounded-full animate-spin"></div>
+               <IoPlayCircle
+                  className="absolute text-anime-primary/50 animate-pulse"
+                  size={32}
+               />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+               <span className="font-black tracking-[0.2em] text-sm animate-pulse text-white drop-shadow-[0_0_10px_rgba(160,124,254,0.6)]">
+                  INITIALIZING PLAYER
+               </span>
+               <span className="text-xs text-anime-primary/60 font-mono tracking-widest">
+                  Securing Stream Connection...
+               </span>
+            </div>
+         </div>
+      </>
+   );
+}
+
+// ==========================================
+// 主頁面 (瞬間渲染)
+// ==========================================
 export default async function AnimeWatchPage({
    params,
 }: {
@@ -13,7 +117,7 @@ export default async function AnimeWatchPage({
    const malId = resolvedParams.id;
    const currentEpNumber = resolvedParams.episode || '1';
 
-   // 1. Fetch anime details from Jikan API (for precise title and poster)
+   // 1. Fetch anime details (極快)
    const jikanRes = await fetch(`https://api.jikan.moe/v4/anime/${malId}`);
    const jikanData = await jikanRes.json();
    const anime = jikanData.data;
@@ -28,18 +132,14 @@ export default async function AnimeWatchPage({
       );
    }
 
-   // 2. Fetch Playlist (Episodes) from Jikan with AniList Fallback
+   // 2. Fetch Playlist (極快)
    const query = `
       query ($id: Int) {
          Media(idMal: $id, type: ANIME) {
             bannerImage
             episodes
-            nextAiringEpisode {
-               episode
-            }
-            streamingEpisodes {
-               title
-            }
+            nextAiringEpisode { episode }
+            streamingEpisodes { title }
          }
       }
    `;
@@ -54,8 +154,7 @@ export default async function AnimeWatchPage({
       cache: 'no-store',
    }).catch(() => null);
 
-   // Prevent rate limit for Jikan
-   await new Promise((resolve) => setTimeout(resolve, 800));
+   await new Promise((resolve) => setTimeout(resolve, 800)); // Rate limit buffer
    const episodesRes = await fetch(
       `https://api.jikan.moe/v4/anime/${malId}/episodes`,
    ).catch(() => null);
@@ -68,7 +167,6 @@ export default async function AnimeWatchPage({
    const episodesData = episodesRes?.ok ? await episodesRes.json() : null;
    let rawEpisodes = episodesData?.data || [];
 
-   // 🚨 Fallback: If Jikan fails to find episodes, use AniList data
    if (rawEpisodes.length === 0 && media) {
       const airedCount = media.nextAiringEpisode
          ? media.nextAiringEpisode.episode - 1
@@ -92,14 +190,13 @@ export default async function AnimeWatchPage({
       }
    }
 
-   // Format episodes to match our UI mapping
    const episodes = rawEpisodes.map((ep: any) => ({
       id: ep.mal_id.toString(),
       number: ep.mal_id,
       title: ep.title,
    }));
 
-   // 3. Fetch Streaming URL using custom Kagure Action
+   // 3. 準備水母的搜尋關鍵字
    const displayTitle = anime.title_english || anime.title;
    const zhTitleObj = anime.titles?.find(
       (t: any) =>
@@ -112,17 +209,9 @@ export default async function AnimeWatchPage({
       anime.title_japanese ||
       anime.title_english ||
       anime.title;
-
    const searchQuery = rawQuery
       .replace(/(Season \d+|\d+th Season|Part \d+|第.期|第.季)/gi, '')
       .trim();
-
-   console.log(
-      `[Next.js Server] Fetching video stream for: ${searchQuery} - Episode ${currentEpNumber}`,
-   );
-
-   const streamData = await fetchVideoStream(searchQuery, currentEpNumber);
-   const streamUrl = streamData.success ? streamData.videoUrl : null;
 
    const currentEpisodeData = episodes.find(
       (ep: any) => ep.number.toString() === currentEpNumber,
@@ -130,9 +219,9 @@ export default async function AnimeWatchPage({
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
 
    return (
-      <main className="flex-1 relative h-screen w-full overflow-hidden bg-[#0B0E14] flex flex-col">
-         {/* Immersive Ambient Blur Background */}
-         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110">
+      <main className="flex-1 relative min-h-screen lg:h-screen w-full lg:overflow-hidden bg-[#0B0E14] flex flex-col">
+         {/* 背景渲染 */}
+         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110 transform-gpu">
             {bgImage && (
                <Image
                   src={bgImage}
@@ -142,10 +231,9 @@ export default async function AnimeWatchPage({
                />
             )}
          </div>
-         <div className="absolute inset-0 bg-linear-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
+         <div className="absolute inset-0 bg-gradient-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
 
-         {/* Top Navigation Bar */}
-         <header className="relative z-10 w-full px-6 py-6 flex items-center justify-between shrink-0">
+         <header className="relative z-10 w-full px-6 md:px-8 py-6 pt-8 lg:pt-10 flex items-center justify-between shrink-0 mt-14">
             <Link
                href={`/anime/${malId}`}
                className="flex items-center gap-2 text-slate-400 hover:text-anime-primary transition-colors group bg-white/5 px-4 py-2 rounded-xl backdrop-blur-md border border-white/5 hover:border-anime-primary/30"
@@ -158,117 +246,115 @@ export default async function AnimeWatchPage({
             </Link>
          </header>
 
-         {/* Main Content Area: Left Player + Right Playlist */}
-         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-6 pb-6 overflow-hidden h-full">
-            {/* Left Column: Video Player & Info */}
-            <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-               <div className="w-full aspect-video bg-black rounded-2xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center relative overflow-hidden group shrink-0">
-                  {streamUrl ? (
-                     <VideoPlayer videoUrl={streamUrl} poster={bgImage} />
-                  ) : (
-                     <>
-                        {bgImage && (
-                           <Image
-                              src={bgImage}
-                              alt="player thumbnail"
-                              fill
-                              className="object-cover opacity-40"
-                           />
-                        )}
-                        <div className="absolute inset-0 bg-black/40" />
-                        <div className="relative z-10 flex flex-col items-center gap-4 text-white/50">
-                           <IoPlayCircle size={64} className="opacity-50" />
-                           <span className="font-medium tracking-wider">
-                              No stream available for this episode.
-                           </span>
-                        </div>
-                     </>
-                  )}
+         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pb-6 lg:overflow-hidden h-full">
+            {/* 左側容器 */}
+            <div className="w-full lg:flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-y-auto transform-gpu [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+               {/* ========================================== */}
+               {/* 🚀 戰術核心：這裡使用 Suspense 包裹水母抓取器 */}
+               {/* ========================================== */}
+               <div className="w-full aspect-video bg-[#07090D] rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col relative overflow-hidden shrink-0">
+                  <Suspense fallback={<VideoSkeleton bgImage={bgImage} />}>
+                     <StreamFetcher
+                        searchQuery={searchQuery}
+                        currentEpNumber={currentEpNumber}
+                        malId={malId}
+                        bgImage={bgImage}
+                        episodes={episodes}
+                     />
+                  </Suspense>
                </div>
 
                {/* Anime Info Below Player */}
-               <div className="mt-6 flex flex-col gap-2 shrink-0 pb-10">
-                  <h1 className="text-2xl md:text-3xl font-black text-white line-clamp-1 drop-shadow-md">
-                     {displayTitle}
-                  </h1>
-                  <h2 className="text-lg text-anime-primary font-bold">
-                     Episode {currentEpNumber}{' '}
-                     {currentEpisodeData?.title
-                        ? `- ${currentEpisodeData.title}`
-                        : ''}
-                  </h2>
-                  <div className="mt-4 p-5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                     <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-                        <div className="w-1.5 h-4 bg-anime-primary rounded-full" />
-                        Synopsis
-                     </h3>
-                     <p className="text-sm text-slate-400 leading-relaxed text-justify">
-                        {anime.synopsis || 'No synopsis available.'}
-                     </p>
+               <div className="mt-6 flex flex-col gap-4 shrink-0 pb-12">
+                  <div className="flex flex-col gap-2">
+                     <h1 className="text-3xl md:text-4xl font-black text-white line-clamp-2 drop-shadow-md">
+                        {displayTitle}
+                     </h1>
+                     <div className="flex flex-wrap items-center gap-3 mt-1">
+                        <span className="flex items-center gap-2 text-anime-primary font-bold text-sm bg-anime-primary/10 border border-anime-primary/20 px-3 py-1 rounded-lg shadow-[0_0_10px_rgba(160,124,254,0.1)]">
+                           EPISODE {currentEpNumber}
+                        </span>
+                        <span className="text-base text-slate-300 font-medium">
+                           {currentEpisodeData?.title &&
+                           currentEpisodeData.title !==
+                              `Episode ${currentEpNumber}`
+                              ? currentEpisodeData.title
+                              : 'Official Stream'}
+                        </span>
+                     </div>
+                  </div>
+
+                  {/* 豐富化的簡介資訊卡 */}
+                  <div className="mt-2 p-4 md:p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl transform-gpu shadow-lg flex gap-4 md:gap-6">
+                     {/* 左側：動漫海報 (在極小螢幕上隱藏以節省空間) */}
+                     <div className="relative w-24 sm:w-32 md:w-36 aspect-[3/4] shrink-0 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 hidden sm:block">
+                        <Image
+                           src={anime.images?.webp?.large_image_url || bgImage}
+                           alt={anime.title}
+                           fill
+                           className="object-cover"
+                        />
+                     </div>
+
+                     {/* 右側：詳細標籤與文字 */}
+                     <div className="flex flex-col flex-1 min-w-0">
+                        <h3 className="font-bold text-white mb-3 flex items-center gap-3 text-base">
+                           <div className="w-1.5 h-5 bg-anime-primary rounded-full shadow-[0_0_10px_rgba(160,124,254,0.6)]" />
+                           About Anime
+                        </h3>
+
+                        {/* Metadata 標籤 */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                           {anime.score && (
+                              <span className="flex items-center gap-1 text-[11px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-md border border-yellow-400/20">
+                                 ★ {anime.score}
+                              </span>
+                           )}
+                           {anime.status && (
+                              <span className="text-[11px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 uppercase tracking-wider">
+                                 {anime.status === 'Currently Airing'
+                                    ? 'Airing'
+                                    : anime.status}
+                              </span>
+                           )}
+                           {anime.rating && (
+                              <span className="text-[11px] font-bold text-white/70 bg-white/10 px-2 py-1 rounded-md border border-white/10 uppercase tracking-wider">
+                                 {anime.rating.split(' ')[0]}
+                              </span>
+                           )}
+                        </div>
+
+                        {/* 類型標籤 (Genres) */}
+                        <div className="flex flex-wrap gap-1.5 mb-3 md:mb-4">
+                           {anime.genres?.map((genre: any) => (
+                              <span
+                                 key={genre.mal_id}
+                                 className="text-[10px] md:text-[11px] text-slate-300 border border-white/10 bg-black/20 px-2.5 py-0.5 rounded-full whitespace-nowrap"
+                              >
+                                 {genre.name}
+                              </span>
+                           ))}
+                        </div>
+
+                        {/* 簡介文字 (使用 line-clamp，Hover 時自動展開) */}
+                        <p
+                           className="text-xs md:text-sm text-slate-400 leading-relaxed text-justify line-clamp-3 md:line-clamp-4 hover:line-clamp-none transition-all duration-300 cursor-pointer"
+                           title="Click to read more"
+                        >
+                           {anime.synopsis ||
+                              'No synopsis available for this anime.'}
+                        </p>
+                     </div>
                   </div>
                </div>
             </div>
 
             {/* Right Column: Playlist Sidebar */}
-            <div className="w-full lg:w-[380px] shrink-0 flex flex-col h-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden shadow-2xl">
-               <div className="px-6 py-5 border-b border-white/10 bg-black/20">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                     <div className="w-1 h-5 bg-anime-primary rounded-full shadow-[0_0_10px_rgba(160,124,254,0.8)]" />
-                     Playlist
-                  </h3>
-                  <span className="text-xs text-slate-400 mt-1 block">
-                     {episodes.length} Episodes Available
-                  </span>
-               </div>
-
-               {/* Scrollable Episode List */}
-               <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
-                  {episodes.length > 0 ? (
-                     episodes.map((ep: any) => {
-                        const isCurrent =
-                           ep.number.toString() === currentEpNumber;
-                        return (
-                           <Link
-                              href={`/player/${malId}/${ep.number}`}
-                              key={ep.id}
-                              className={`relative flex items-center gap-4 p-3 rounded-xl transition-all duration-300 group overflow-hidden ${
-                                 isCurrent
-                                    ? 'bg-anime-primary/10 border border-anime-primary/50 shadow-[inset_0_0_20px_rgba(160,124,254,0.15)]'
-                                    : 'bg-transparent border border-transparent hover:bg-white/5 hover:border-white/10'
-                              }`}
-                           >
-                              {/* Active indicator line */}
-                              {isCurrent && (
-                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-anime-primary shadow-[0_0_10px_rgba(160,124,254,0.8)]" />
-                              )}
-
-                              <div className="flex flex-col flex-1 min-w-0 pl-2">
-                                 <span
-                                    className={`text-xs font-black tracking-wider mb-0.5 ${isCurrent ? 'text-anime-primary' : 'text-slate-500 group-hover:text-slate-400'}`}
-                                 >
-                                    EP {ep.number}
-                                 </span>
-                                 <span
-                                    className={`text-sm font-bold line-clamp-1 transition-colors ${isCurrent ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}
-                                 >
-                                    {ep.title || `Episode ${ep.number}`}
-                                 </span>
-                              </div>
-
-                              <IoPlayCircle
-                                 className={`shrink-0 transition-all duration-300 ${isCurrent ? 'text-anime-primary opacity-100 drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]' : 'text-white/30 opacity-0 group-hover:opacity-100 group-hover:scale-110'}`}
-                                 size={24}
-                              />
-                           </Link>
-                        );
-                     })
-                  ) : (
-                     <div className="p-4 text-center text-sm text-slate-500">
-                        No episodes found.
-                     </div>
-                  )}
-               </div>
-            </div>
+            <EpisodeList
+               episodes={episodes}
+               currentEpNumber={currentEpNumber}
+               malId={malId}
+            />
          </div>
       </main>
    );
