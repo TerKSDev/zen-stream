@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { ROUTES } from '@/lib/config/route';
 import Link from 'next/link';
-import { IoLogInOutline } from 'react-icons/io5';
+import { IoChatbubbleEllipsesSharp } from 'react-icons/io5';
 import { usePathname } from 'next/navigation';
+import FeedbackModal from './FeedbackModal';
 
 export default function SideNav() {
    const pathname = usePathname();
+   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
    return (
       <nav className="sticky top-0 left-0 z-50 flex h-screen w-14 shrink-0 flex-col items-center justify-between gap-6 border-r border-white/5 bg-[#0B0E14] px-2 py-4 shadow-[4px_0_24px_rgba(0,0,0,0.4)] sm:w-16 sm:gap-8 sm:px-3 sm:py-6">
@@ -49,14 +52,19 @@ export default function SideNav() {
          </div>
 
          <div className="mb-2">
-            <Link
-               href={ROUTES[0].path}
-               title="Sign In"
+            <button
+               onClick={() => setIsFeedbackOpen(true)}
+               title="Feedback"
                className="relative rounded-xl transition-all duration-300 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center group text-slate-400 hover:bg-white/5 hover:text-white hover:scale-110"
             >
-               <IoLogInOutline className="h-5 w-5 sm:h-6 sm:w-6 transition-all duration-300 group-hover:text-anime-primary group-hover:drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]" />
-            </Link>
+               <IoChatbubbleEllipsesSharp className="h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 group-hover:text-anime-primary group-hover:drop-shadow-[0_0_8px_rgba(160,124,254,0.6)]" />
+            </button>
          </div>
+
+         <FeedbackModal
+            isOpen={isFeedbackOpen}
+            onClose={() => setIsFeedbackOpen(false)}
+         />
       </nav>
    );
 }
