@@ -4,10 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { IoChevronBackOutline, IoChevronForwardOutline } from 'react-icons/io5';
 import Link from 'next/link';
-import type { AnimeCard, AnimeGenre } from '@/lib/types/anime';
 
 interface HeroSlideshowProps {
-   animes: AnimeCard[];
+   animes: any[];
 }
 
 export default function SlideShow({ animes }: HeroSlideshowProps) {
@@ -88,8 +87,8 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
 
          <div className="absolute inset-0 bg-linear-to-r from-black via-black/80 to-black/40 pointer-events-none transition-opacity duration-500" />
 
-         <div className="font-inter absolute top-[12%] left-4 right-4 sm:left-6 sm:right-6 md:left-12 md:right-auto z-20 max-w-[min(42rem,calc(100vw-6rem))] flex flex-col gap-3 sm:gap-4 transition-all duration-500">
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] line-clamp-2 wrap-break-word">
+         <div className="font-inter absolute top-[15%] left-6 md:left-12 z-20 max-w-2xl flex flex-col gap-4 transition-all duration-500">
+            <h1 className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] line-clamp-2">
                {activeAnime?.title_english || activeAnime?.title}
             </h1>
 
@@ -119,7 +118,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
 
             {activeAnime?.genres && activeAnime.genres.length > 0 && (
                <div className="flex flex-wrap gap-2 mt-1">
-                  {activeAnime.genres.slice(0, 3).map((genre: AnimeGenre) => (
+                  {activeAnime.genres.slice(0, 3).map((genre: any) => (
                      <span
                         key={genre.mal_id}
                         className="text-[11px] md:text-xs px-3 py-1 rounded-full border border-white/10 bg-white/10 backdrop-blur-md text-white/90 hover:bg-anime-primary/60 hover:border-anime-primary/60 transition-all cursor-default"
@@ -136,14 +135,14 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
 
             <Link
                href={`/anime/${activeAnime?.mal_id}`}
-               className="self-start mt-2 px-5 sm:px-8 py-2 sm:py-2.5 bg-anime-primary text-white text-sm sm:text-base font-bold rounded-lg hover:scale-105 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] transition-all duration-300 active:scale-95"
+               className="self-start mt-2 px-8 py-2.5 bg-anime-primary text-white font-bold rounded-lg hover:scale-105 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] transition-all duration-300 active:scale-95"
             >
                View Details
             </Link>
          </div>
 
-         <div className="relative flex flex-col gap-2 px-3 sm:px-6 pb-4 sm:pb-6">
-            <div className="text-white text-sm sm:text-lg left-4 z-10 font-bold uppercase tracking-wide opacity-80 font-sans flex items-center gap-3 sm:gap-4 px-2">
+         <div className="relative flex flex-col gap-2 px-6 pb-6">
+            <div className="text-white text-lg left-4 z-10 font-bold uppercase tracking-wide opacity-80 font-sans flex items-center gap-4 px-2">
                Top 10 Popular Anime of the Season
                <div className="h-px bg-white/60 flex-1 flex" />
             </div>
@@ -151,14 +150,14 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
                <button
                   onClick={() => scroll('left')}
                   aria-label="Scroll left"
-                  className="hidden sm:flex absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white hover:bg-[#A07CFE] hover:border-transparent transition-all duration-300 shadow-lg"
+                  className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white hover:bg-[#A07CFE] hover:border-transparent transition-all duration-300 shadow-lg"
                >
                   <IoChevronBackOutline className="w-6 h-6" />
                </button>
 
                <div
                   ref={scrollContainerRef}
-                  className="flex items-center gap-3 sm:gap-4 px-2 sm:px-12 md:px-2 py-3 sm:py-4 overflow-x-auto sm:overflow-hidden scroll-smooth h-fit [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className="flex items-center gap-4 px-12 md:px-2 py-4 overflow-hidden scroll-smooth h-fit"
                >
                   {animes.map((anime, index) => {
                      const isActive = index === activeIndex;
@@ -173,7 +172,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
                                  : 'opacity-50 hover:opacity-100 hover:scale-105 z-0'
                            }`}
                         >
-                           <div className="relative aspect-3/4 w-24 sm:w-28 md:w-32 overflow-hidden rounded-lg shadow-lg">
+                           <div className="relative aspect-3/4 w-32 overflow-hidden rounded-lg shadow-lg">
                               <Image
                                  src={anime.images.webp.large_image_url}
                                  alt={anime.title}
@@ -199,7 +198,7 @@ export default function SlideShow({ animes }: HeroSlideshowProps) {
                <button
                   onClick={() => scroll('right')}
                   aria-label="Scroll right"
-                  className="hidden sm:flex absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white hover:bg-[#A07CFE] hover:border-transparent transition-all duration-300 shadow-lg"
+                  className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white hover:bg-[#A07CFE] hover:border-transparent transition-all duration-300 shadow-lg"
                >
                   <IoChevronForwardOutline className="w-6 h-6" />
                </button>

@@ -22,7 +22,27 @@ export interface AnimeCard {
    episodes?: number | null;
    status?: string | null;
    synopsis?: string | null;
+   aired?: {
+      from?: string | null;
+      to?: string | null;
+      string?: string | null;
+   } | null;
+   broadcast?: {
+      day?: string | null;
+      time?: string | null;
+      timezone?: string | null;
+      string?: string | null;
+   } | null;
+   season?: string | null;
+   year?: number | null;
    genres?: AnimeGenre[];
+}
+
+export interface ExploreSectionData {
+   id: string;
+   title: string;
+   description: string;
+   items: AnimeCard[];
 }
 
 export interface AnimeTitle {
