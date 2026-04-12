@@ -21,15 +21,20 @@ export const authOptions: NextAuthOptions = {
             password: { label: 'Password', type: 'password' },
          },
          async authorize(credentials) {
-            const email = credentials?.email?.trim().toLowerCase();
+            const identifier = credentials?.email?.trim();
             const password = credentials?.password || '';
 
-            if (!email || !password) {
+            if (!identifier || !password) {
                return null;
             }
 
-            const user = await prisma.user.findUnique({
-               where: { email },
+            const user = await prisma.user.findFirst({
+               where: {
+                  OR: [
+                     { email: identifier.toLowerCase() },
+                     { name: identifier },
+                  ],
+               },
             });
 
             if (!user?.password) {
