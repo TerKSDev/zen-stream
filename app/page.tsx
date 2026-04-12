@@ -3,7 +3,8 @@ import { getSeasonAnime } from '@/lib/jikan-api';
 import HeroSection from '@/components/sections/Hero';
 
 export default async function HomePage() {
-   const data = await getSeasonAnime(18);
+   // 多請求一些資料作為緩衝，確保去重後還有足夠的數量
+   const data = await getSeasonAnime(25);
 
    return (
       <main className="flex-1 relative h-screen w-full min-w-0 overflow-hidden bg-[#0B0E14]">
