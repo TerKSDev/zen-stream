@@ -3,7 +3,11 @@
 import { PATHS } from '@/lib/config/route';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
-import { IoCloseCircle, IoSearch } from 'react-icons/io5';
+import {
+   IoCloseCircle,
+   IoSearch,
+   IoNotificationsOutline,
+} from 'react-icons/io5';
 
 const SCROLL_CONTAINER_SELECTOR = '[data-header-scroll-container="true"]';
 
@@ -15,6 +19,9 @@ export default function Header() {
 
    const [query, setQuery] = useState('');
    const [hasScrollableContent, setHasScrollableContent] = useState(false);
+
+   // 模擬登入狀態 (Mock Login State)
+   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
    useEffect(() => {
       const nextQuery = searchParams.get('q') ?? '';
@@ -152,9 +159,32 @@ export default function Header() {
          </form>
 
          <div className="hidden h-full items-center shrink-0 sm:flex">
-            <button className="rounded-xl bg-anime-primary px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-anime-primary/90 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm">
-               Sign In
-            </button>
+            {isLoggedIn ? (
+               <div className="flex items-center gap-4 lg:gap-6">
+                  <button className="relative text-slate-400 hover:text-white transition-colors duration-300">
+                     <IoNotificationsOutline size={24} />
+                     <span className="absolute top-0 right-0 w-2 h-2 bg-anime-primary rounded-full border border-[#0B0E14]"></span>
+                  </button>
+                  <button
+                     onClick={() => setIsLoggedIn(false)}
+                     className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-anime-primary transition-all duration-300 active:scale-95"
+                     title="Sign Out (Mock)"
+                  >
+                     <img
+                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=A07CFE"
+                        alt="User Avatar"
+                        className="w-full h-full object-cover"
+                     />
+                  </button>
+               </div>
+            ) : (
+               <button
+                  onClick={() => setIsLoggedIn(true)}
+                  className="rounded-xl bg-anime-primary px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-anime-primary/90 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
+               >
+                  Sign In
+               </button>
+            )}
          </div>
       </header>
    );

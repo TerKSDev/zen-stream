@@ -6,6 +6,11 @@ import { fetchJikan } from '@/lib/jikan-api';
 import AnimeEpisodes from './_components/AnimeEpisodes';
 import AnimeRecommendations from './_components/AnimeRecommendations';
 import AnimeCharacters from './_components/AnimeCharacters';
+import ExpandableSynopsis from './_components/ExpandableSynopsis';
+import PosterLightbox from './_components/PosterLightbox';
+import MobileActionBar from '@/components/MobileActionBar';
+import BookmarkButton from '@/components/ui/BookmarkButton';
+import ShareButton from '@/components/ui/ShareButton';
 import type {
    AniListMediaResponse,
    AnimeDetail,
@@ -142,31 +147,42 @@ export default async function AnimeDetailPage({
                priority
                className="object-cover opacity-40"
             />
-            <div className="absolute inset-0 bg-linear-to-t from-[#0B0E14] via-[#0B0E14]/80 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-[#0B0E14] via-[#0B0E14]/50 to-transparent" />
             <div className="absolute inset-0 bg-linear-to-r from-[#0B0E14]/90 via-[#0B0E14]/50 to-transparent" />
          </div>
 
-         {/* 滾動內容容器 */}
-         <div className="relative z-10 w-full py-26">
-            {/* 主要詳細資訊區塊 */}
-            <div className="px-4 sm:px-6 md:px-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-10 lg:gap-14">
-               {/* 左側：海報與播放按鈕 */}
-               <div className="flex min-w-0 flex-col gap-6 items-center lg:items-start">
-                  <div className="relative w-56 lg:w-full aspect-3/4 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] ring-1 ring-white/10 group">
-                     <Image
+         {/* 滾動內容容器 - 增加 pb-32 以避免手機版底部懸浮列遮擋內容 */}
+         <div className="relative z-10 w-full pb-32 lg:pb-16 pt-28 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+               {/* 左側：海報與操作區 (Sticky Sidebar) */}
+               <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start z-20">
+                  <div id="mobile-poster" className="w-48 sm:w-56 lg:w-full mx-auto lg:mx-0">
+                     <PosterLightbox
                         src={anime.images.webp.large_image_url}
                         alt={anime.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
                      />
                   </div>
-                  <Link
-                     href={`/player/${mal_id}/1`}
-                     className="w-full flex items-center justify-center gap-2 px-8 py-3.5 bg-anime-primary text-white text-lg font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.6)] active:scale-95 transition-all duration-300"
-                  >
-                     <IoPlayCircle size={26} />
-                     Watch Now
-                  </Link>
+
+                  <div className="flex w-full flex-col gap-3 md:gap-4">
+                     <Link
+                        href={`/player/${mal_id}/1`}
+                        className="w-full flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-8 py-3 md:py-3.5 bg-anime-primary text-white text-sm sm:text-base md:text-lg font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.6)] active:scale-95 transition-all duration-300"
+                     >
+                        <IoPlayCircle className="w-5 h-5 md:w-[26px] md:h-[26px]" />
+                        Watch Now
+                     </Link>
+
+                     <div className="flex flex-row flex-wrap w-full gap-2">
+                        <BookmarkButton
+                           anime={anime}
+                           className="flex-1 py-1.5 md:py-2 text-xs md:text-base bg-white/5 hover:bg-white/10 border-white/10"
+                        />
+                        <ShareButton
+                           title={anime.title_english || anime.title}
+                           className="flex-1 py-1.5 md:py-2 text-xs md:text-base bg-white/5 hover:bg-white/10 border-white/10"
+                        />
+                     </div>
+                  </div>
 
                   {/* 相關動漫 (Related Media) */}
                   {anime.relations && anime.relations.length > 0 && (
@@ -215,73 +231,75 @@ export default async function AnimeDetailPage({
                   )}
                </div>
 
-               {/* 右側：詳細資訊 */}
-               <div className="mt-4 flex min-w-0 flex-col gap-5 text-center lg:mt-0 lg:text-left">
-                  <div>
-                     <h1 className="wrap-break-word text-3xl md:text-5xl font-black text-white drop-shadow-lg leading-tight">
-                        {anime.title_english || anime.title}
-                     </h1>
-                     {anime.title_japanese && (
-                        <h2 className="mt-2 wrap-break-word text-lg md:text-xl text-slate-400 font-medium tracking-wide">
-                           {anime.title_japanese}
-                        </h2>
-                     )}
-                  </div>
+               {/* 右側：主內容區 */}
+               <div className="flex-1 flex flex-col min-w-0 gap-8 mt-4 lg:mt-0">
+                  {/* 標題與 Metadata */}
+                  <div className="flex flex-col gap-4 text-center lg:text-left">
+                     <div>
+                        <h1 className="wrap-break-word text-3xl md:text-5xl font-black text-white drop-shadow-lg leading-tight">
+                           {anime.title_english || anime.title}
+                        </h1>
+                        {anime.title_japanese && (
+                           <h2 className="mt-2 wrap-break-word text-lg md:text-xl text-slate-400 font-medium tracking-wide">
+                              {anime.title_japanese}
+                           </h2>
+                        )}
+                     </div>
 
-                  {/* Metadata 標籤 */}
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-2 text-sm font-semibold text-white/90">
-                     {anime.score && (
-                        <span className="flex items-center gap-1 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10">
-                           ★ {anime.score}
+                     {/* Metadata 標籤 */}
+                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-sm font-semibold text-white/90">
+                        {anime.score && (
+                           <span className="flex items-center gap-1 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10">
+                              ★ {anime.score}
+                           </span>
+                        )}
+                        <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 tracking-wider">
+                           {anime.type}{' '}
+                           {anime.episodes ? `· ${anime.episodes} EPS` : ''}
                         </span>
-                     )}
-                     <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 tracking-wider">
-                        {anime.type}{' '}
-                        {anime.episodes ? `· ${anime.episodes} EPS` : ''}
-                     </span>
-                     {anime.status && (
-                        <span className="flex items-center gap-1.5 text-white/80 bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10">
+                        {anime.status && (
+                           <span className="flex items-center gap-1.5 text-white/80 bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10">
+                              <span
+                                 className={`w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] ${
+                                    anime.status === 'Currently Airing'
+                                       ? 'bg-green-400 text-green-400'
+                                       : 'bg-gray-400 text-gray-400'
+                                 }`}
+                              ></span>
+                              {anime.status === 'Currently Airing'
+                                 ? 'Airing'
+                                 : anime.status}
+                           </span>
+                        )}
+                        <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 tracking-wider">
+                           {anime.rating || 'Unrated'}
+                        </span>
+                     </div>
+
+                     {/* 類型標籤 (Genres) */}
+                     <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                        {anime.genres?.map((genre) => (
                            <span
-                              className={`w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] ${
-                                 anime.status === 'Currently Airing'
-                                    ? 'bg-green-400 text-green-400'
-                                    : 'bg-gray-400 text-gray-400'
-                              }`}
-                           ></span>
-                           {anime.status === 'Currently Airing'
-                              ? 'Airing'
-                              : anime.status}
-                        </span>
-                     )}
-                     <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 tracking-wider">
-                        {anime.rating || 'Unrated'}
-                     </span>
-                  </div>
-
-                  {/* 類型標籤 (Genres) */}
-                  <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-2">
-                     {anime.genres?.map((genre) => (
-                        <span
-                           key={genre.mal_id}
-                           className="text-xs md:text-sm px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white/80 hover:bg-anime-primary/40 hover:text-white transition-colors cursor-default"
-                        >
-                           {genre.name}
-                        </span>
-                     ))}
+                              key={genre.mal_id}
+                              className="text-xs md:text-sm px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white/80 hover:bg-anime-primary/40 hover:text-white transition-colors cursor-default"
+                           >
+                              {genre.name}
+                           </span>
+                        ))}
+                     </div>
                   </div>
 
                   {/* 簡介 (Synopsis) */}
-                  <div className="mt-4">
-                     <h3 className="text-xl font-bold mb-3 text-white">
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm shadow-lg">
+                     <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                        <div className="w-1.5 h-5 bg-anime-primary rounded-full shadow-[0_0_8px_rgba(160,124,254,0.6)]" />
                         Synopsis
                      </h3>
-                     <p className="text-slate-300 leading-relaxed text-sm md:text-base text-justify lg:text-left">
-                        {anime.synopsis || 'No synopsis available.'}
-                     </p>
+                     <ExpandableSynopsis text={anime.synopsis || ''} />
                   </div>
 
                   {/* 更多資訊網格 (Studio, Source, Duration, Aired) */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-8 py-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm shadow-lg">
                      <div className="flex flex-col gap-1.5">
                         <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
                            Studios
@@ -318,13 +336,18 @@ export default async function AnimeDetailPage({
                      </div>
                   </div>
 
-                  {/* 集數列表 (Episodes) 移入右側資訊欄 */}
-                  <AnimeEpisodes episodes={episodes} animeId={mal_id} />
+                  {/* 集數列表 (Episodes) */}
+                  <div className="backdrop-blur-sm px-2 -mt-5">
+                     <AnimeEpisodes episodes={episodes} animeId={mal_id} />
+                  </div>
                </div>
             </div>
 
-            <AnimeCharacters characters={characters} />
-            <AnimeRecommendations recommendations={recommendations} />
+            {/* 底部滿版：角色與推薦動漫 */}
+            <div className="mt-12 flex flex-col gap-12">
+               <AnimeCharacters characters={characters} />
+               <AnimeRecommendations recommendations={recommendations} />
+            </div>
          </div>
       </main>
    );

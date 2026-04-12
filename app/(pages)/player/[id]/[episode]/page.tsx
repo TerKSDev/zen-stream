@@ -6,7 +6,7 @@ import VideoPlayer from './_components/VideoPlayer';
 import { fetchVideoStream } from '@/app/_actions/anime';
 import EpisodeList from './_components/EpisodeList';
 import AnimeRecommendations from '@/app/(pages)/anime/[mal_id]/_components/AnimeRecommendations';
-import ShareButton from './_components/ShareButton';
+import ShareButton from '../../../../../components/ui/ShareButton';
 import type {
    AniListMediaResponse,
    AnimeDetail,

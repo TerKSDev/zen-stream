@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import SideNav from '@/components/SideNav';
 import Header from '@/components/Header';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({
    subsets: ['latin'],
@@ -32,6 +33,9 @@ export const metadata: Metadata = {
    title: {
       template: '%s | ZenStream',
       default: 'ZenStream - Discover & Watch Anime',
+   },
+   verification: {
+      google: '_af4gXVwaHot-IUy7VqWWbGBqjg9NXZ3Vebl1x3yxas',
    },
    description:
       'Discover, track, and watch your favorite anime. ZenStream provides the latest schedules, trending shows, and personalized recommendations.',
@@ -99,6 +103,17 @@ export default function RootLayout({
                   <Header />
                </Suspense>
                {children}
+               {/* 全域 Toast 提示設定 */}
+               <Toaster
+                  position="bottom-right"
+                  toastOptions={{
+                     style: {
+                        background: '#141824',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                     },
+                  }}
+               />
             </main>
          </body>
       </html>
