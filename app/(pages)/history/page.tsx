@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { Dialog, Transition } from '@headlessui/react';
 import {
    IoCloseCircle,
    IoPlayCircle,
    IoSearch,
    IoTimeSharp,
    IoTrashOutline,
+   IoWarningOutline,
 } from 'react-icons/io5';
 import {
    clearLocalHistory,
@@ -26,6 +28,27 @@ function formatProgressTime(seconds: number) {
       .padStart(2, '0');
    const secs = (totalSeconds % 60).toString().padStart(2, '0');
    return `${mins}:${secs}`;
+}
+
+// 將日期轉換為人性化的相對時間 (Relative Time)
+function formatRelativeTime(dateString: string) {
+   const date = new Date(dateString);
+   const now = new Date();
+   const diffMs = now.getTime() - date.getTime();
+   const diffMins = Math.floor(diffMs / 60000);
+   const diffHours = Math.floor(diffMins / 60);
+   const diffDays = Math.floor(diffHours / 24);
+
+   if (diffMins < 1) return 'Just now';
+   if (diffMins < 60) return `${diffMins}m ago`;
+   if (diffHours < 24) return `${diffHours}h ago`;
+   if (diffDays === 1) return 'Yesterday';
+   if (diffDays < 7) return `${diffDays}d ago`;
+   return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+   });
 }
 
 type HistoryApiResponse = {
@@ -77,6 +100,7 @@ export default function HistoryPage() {
    const [isReady, setIsReady] = useState(false);
    const [isSyncing, setIsSyncing] = useState(false);
    const [hasSyncedSession, setHasSyncedSession] = useState(false);
+   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
    useEffect(() => {
       const localHistories = readLocalHistory();
@@ -116,16 +140,24 @@ export default function HistoryPage() {
    }, [hasSyncedSession, isReady, status]);
 
    const filteredHistories = useMemo(() => {
-      const keyword = query.trim().toLowerCase();
-      if (!keyword) {
-         return histories;
-      }
+      let result = [...histories];
 
-      return histories.filter(
-         (item) =>
-            item.title.toLowerCase().includes(keyword) ||
-            item.episode.toLowerCase().includes(keyword),
+      // 1. 依據 updatedAt 降冪排序 (最新的排最前面)
+      result.sort(
+         (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
+
+      const keyword = query.trim().toLowerCase();
+      if (keyword) {
+         // 2. 搜尋過濾
+         result = result.filter(
+            (item) =>
+               item.title.toLowerCase().includes(keyword) ||
+               item.episode.toLowerCase().includes(keyword),
+         );
+      }
+      return result;
    }, [histories, query]);
 
    const handleRemove = async (entry: HistoryEntry) => {
@@ -146,16 +178,9 @@ export default function HistoryPage() {
    };
 
    const handleClearAll = async () => {
-      const confirmed = window.confirm(
-         'Clear all watch history records? This action cannot be undone.',
-      );
-
-      if (!confirmed) {
-         return;
-      }
-
       clearLocalHistory();
       setHistories([]);
+      setIsClearDialogOpen(false);
 
       if (status === 'authenticated') {
          const synced = await deleteHistoryFromServer({ clearAll: true });
@@ -190,8 +215,8 @@ export default function HistoryPage() {
                   </span>
                   {histories.length > 0 && (
                      <button
-                        onClick={handleClearAll}
-                        className="rounded-full border border-red-400/20 bg-red-400/10 px-4 py-1.5 text-xs font-bold text-red-400 transition-colors hover:border-red-500 hover:bg-red-500/80 hover:text-white sm:text-sm"
+                        onClick={() => setIsClearDialogOpen(true)}
+                        className="rounded-full border border-red-400/20 bg-red-400/10 px-4 py-1.5 text-xs font-bold text-red-400 transition-colors hover:border-red-500 hover:bg-red-500/80 hover:text-white sm:text-sm shadow-sm"
                      >
                         Clear All
                      </button>
@@ -199,7 +224,7 @@ export default function HistoryPage() {
                </div>
             </header>
 
-            <div className="relative group">
+            <div className="relative group max-w-md mb-2">
                <IoSearch
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-anime-primary"
                   size={18}
@@ -279,9 +304,8 @@ export default function HistoryPage() {
                                  Progress:{' '}
                                  {formatProgressTime(entry.progressTime)}
                               </p>
-                              <p>
-                                 Updated:{' '}
-                                 {new Date(entry.updatedAt).toLocaleString()}
+                              <p className="text-slate-500">
+                                 Updated: {formatRelativeTime(entry.updatedAt)}
                               </p>
                            </div>
 
@@ -316,6 +340,73 @@ export default function HistoryPage() {
                </div>
             )}
          </div>
+
+         {/* 清空確認對話框 (Clear All Modal) */}
+         <Transition appear show={isClearDialogOpen} as={Fragment}>
+            <Dialog
+               as="div"
+               className="relative z-100"
+               onClose={() => setIsClearDialogOpen(false)}
+            >
+               <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0"
+                  enterTo="opacity-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+               >
+                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+               </Transition.Child>
+
+               <div className="fixed inset-0 overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4 text-center">
+                     <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0 scale-95"
+                        enterTo="opacity-100 scale-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100 scale-100"
+                        leaveTo="opacity-0 scale-95"
+                     >
+                        <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-2xl bg-[#0B0E14] border border-white/10 p-6 text-left align-middle shadow-2xl transition-all">
+                           <div className="flex items-center gap-4 mb-4">
+                              <div className="p-3 bg-red-500/10 text-red-500 rounded-full border border-red-500/20">
+                                 <IoWarningOutline size={24} />
+                              </div>
+                              <Dialog.Title
+                                 as="h3"
+                                 className="text-xl font-black text-white"
+                              >
+                                 Clear Watch History
+                              </Dialog.Title>
+                           </div>
+                           <p className="text-sm text-slate-400 mb-6">
+                              Are you sure you want to remove all your watch
+                              history? This action cannot be undone.
+                           </p>
+                           <div className="flex items-center justify-end gap-3 mt-4">
+                              <button
+                                 onClick={() => setIsClearDialogOpen(false)}
+                                 className="px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10 rounded-xl transition-colors"
+                              >
+                                 Cancel
+                              </button>
+                              <button
+                                 onClick={handleClearAll}
+                                 className="px-5 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                              >
+                                 Yes, Clear All
+                              </button>
+                           </div>
+                        </Dialog.Panel>
+                     </Transition.Child>
+                  </div>
+               </div>
+            </Dialog>
+         </Transition>
       </main>
    );
 }

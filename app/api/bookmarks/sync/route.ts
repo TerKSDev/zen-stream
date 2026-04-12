@@ -12,6 +12,7 @@ type BookmarkPayload = {
          large_image_url?: string;
       };
    };
+   status?: string;
 };
 
 export async function POST(req: Request) {
@@ -49,12 +50,14 @@ export async function POST(req: Request) {
                   update: {
                      title: anime.title || 'Unknown',
                      image: anime.images?.webp?.large_image_url || '',
+                     status: anime.status || 'plan_to_watch',
                   },
                   create: {
                      userId: user.id,
                      malId: anime.mal_id as number,
                      title: anime.title || 'Unknown',
                      image: anime.images?.webp?.large_image_url || '',
+                     status: anime.status || 'plan_to_watch',
                   },
                }),
             ),
@@ -73,6 +76,7 @@ export async function POST(req: Request) {
                large_image_url: bookmark.image || '',
             },
          },
+         status: bookmark.status,
       }));
 
       return NextResponse.json(

@@ -27,6 +27,7 @@ model Bookmark {
   malId Int
   title String
   image String?
+  status String @default("plan_to_watch")
   addedAt DateTime @default(now())
   
   userId String

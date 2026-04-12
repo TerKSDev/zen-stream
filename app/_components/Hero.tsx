@@ -214,8 +214,8 @@ export default function HeroSection({
          </div>
 
          {/* 全域漸層遮罩：確保文字與底部區塊的清晰度 */}
-         <div className="absolute inset-0 z-10 bg-linear-to-r from-[#0B0E14]/90 via-[#0B0E14]/50 to-transparent pointer-events-none" />
-         <div className="absolute inset-0 z-10 bg-linear-to-t from-[#0B0E14] via-transparent to-transparent pointer-events-none" />
+         <div className="absolute inset-0 z-10 bg-linear-to-r from-[#0B0E14] via-[#0B0E14]/85 to-transparent pointer-events-none" />
+         <div className="absolute inset-0 z-10 bg-linear-to-t from-[#0B0E14] via-[#0B0E14]/50 to-transparent pointer-events-none" />
 
          {/* 主內容區容器：利用 flexbox 完美劃分空間，防止重疊 */}
          <div className="relative z-20 flex flex-col h-full w-full pt-20 sm:pt-26 pb-4 md:pb-6 pointer-events-none gap-10">

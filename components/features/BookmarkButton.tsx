@@ -66,9 +66,9 @@ export default function BookmarkButton({
       const isAdded = toggleBookmark(anime);
 
       if (isAdded) {
-         toast.success('已新增至我的收藏！');
+         toast.success('Added to bookmarks!');
       } else {
-         toast.success('已從收藏中移除');
+         toast.success('Removed from bookmarks');
       }
    };
 

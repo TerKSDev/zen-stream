@@ -198,7 +198,7 @@ export default function Header() {
       <header
          className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-500 sm:px-8 sm:py-4 ${
             hasScrollableContent
-               ? 'bg-[#0B0E14] border-b border-white/10'
+               ? 'bg-[#05070a] border-b border-white/10'
                : 'bg-transparent'
          } ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} ${pathname === PATHS.BOOKMARK ? 'border-b border-white/10' : ''}`}
       >

@@ -3,6 +3,15 @@
 import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { IoClose, IoLogoGoogle } from 'react-icons/io5';
+import { 
+   IoClose, 
+   IoLogoGoogle,
+   IoMailOutline,
+   IoLockClosedOutline,
+   IoPersonOutline,
+   IoEyeOutline,
+   IoEyeOffOutline
+} from 'react-icons/io5';
 import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
@@ -17,6 +26,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [isLoading, setIsLoading] = useState(false);
+   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+   const [showPassword, setShowPassword] = useState(false);
    const [error, setError] = useState('');
 
    const handleClose = () => {
@@ -29,6 +40,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
          setEmail('');
          setPassword('');
          setError('');
+         setShowPassword(false);
+         setIsGoogleLoading(false);
       }, 300);
    };
 
@@ -137,9 +150,22 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                               signIn('google', { callbackUrl: '/' })
                            }
                            className="w-full flex items-center justify-center gap-3 bg-white text-[#0B0E14] font-bold py-2.5 rounded-xl hover:bg-slate-200 transition-colors mb-6"
+                           type="button"
+                           disabled={isLoading || isGoogleLoading}
+                           onClick={async () => {
+                              setIsGoogleLoading(true);
+                              await signIn('google', { callbackUrl: '/' });
+                           }}
+                           className="w-full flex items-center justify-center gap-3 bg-white text-[#0B0E14] font-bold py-2.5 rounded-xl hover:bg-slate-200 transition-colors mb-6 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                            <IoLogoGoogle size={20} className="text-blue-600" />
                            Continue with Google
+                           {isGoogleLoading ? (
+                              <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+                           ) : (
+                              <IoLogoGoogle size={20} className="text-blue-600" />
+                           )}
+                           {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
                         </button>
 
                         <div className="flex items-center gap-4 mb-6">
@@ -155,14 +181,36 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                            className="flex flex-col gap-4"
                         >
                            {mode === 'register' && (
+                              <div className="relative group">
+                                 <IoPersonOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-anime-primary transition-colors" size={18} />
+                                 <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Username"
+                                    required
+                                    disabled={isLoading || isGoogleLoading}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all disabled:opacity-50"
+                                 />
+                              </div>
+                           )}
+                           
+                           <div className="relative group">
+                              <IoMailOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-anime-primary transition-colors" size={18} />
                               <input
                                  type="text"
                                  value={name}
                                  onChange={(e) => setName(e.target.value)}
                                  placeholder="Username"
+                                 type="email"
+                                 value={email}
+                                 onChange={(e) => setEmail(e.target.value)}
+                                 placeholder="Email address"
                                  required
                                  disabled={isLoading}
                                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all"
+                                 disabled={isLoading || isGoogleLoading}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all disabled:opacity-50"
                               />
                            )}
                            <input
@@ -183,6 +231,29 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                               disabled={isLoading}
                               className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all"
                            />
+                           </div>
+
+                           <div className="relative group">
+                              <IoLockClosedOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-anime-primary transition-colors" size={18} />
+                              <input
+                                 type={showPassword ? 'text' : 'password'}
+                                 value={password}
+                                 onChange={(e) => setPassword(e.target.value)}
+                                 placeholder="Password"
+                                 required
+                                 disabled={isLoading || isGoogleLoading}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all disabled:opacity-50"
+                              />
+                              <button
+                                 type="button"
+                                 onClick={() => setShowPassword(!showPassword)}
+                                 disabled={isLoading || isGoogleLoading}
+                                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+                                 title={showPassword ? "Hide password" : "Show password"}
+                              >
+                                 {showPassword ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+                              </button>
+                           </div>
 
                            {error && (
                               <p className="text-xs text-red-400 font-bold mt-1">
@@ -193,6 +264,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                            <button
                               type="submit"
                               disabled={isLoading}
+                              disabled={isLoading || isGoogleLoading}
                               className="w-full flex items-center justify-center gap-2 bg-anime-primary text-white font-bold py-3 mt-2 rounded-xl transition-all duration-300 hover:bg-anime-primary/90 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(160,124,254,0.4)]"
                            >
                               {isLoading ? (

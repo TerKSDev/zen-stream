@@ -12,7 +12,7 @@ export default function SideNav() {
    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
    return (
-      <nav className="sticky top-0 left-0 z-50 flex h-screen w-14 shrink-0 flex-col items-center justify-between gap-6 border-r border-white/5 bg-[#0B0E14] px-2 py-4 shadow-[4px_0_24px_rgba(0,0,0,0.4)] sm:w-16 sm:gap-8 sm:px-3 sm:py-6">
+      <nav className="sticky top-0 left-0 z-50 flex h-screen w-14 shrink-0 flex-col items-center justify-between gap-6 border-r border-white/10 bg-[#05070a] px-2 py-4 shadow-[4px_0_24px_rgba(0,0,0,0.4)] sm:w-16 sm:gap-8 sm:px-3 sm:py-6">
          <div className="relative flex h-8 w-8 items-center justify-center sm:h-8.5 sm:w-8.5">
             <div className="absolute inset-0 rounded-full border-[3px] border-slate-200 border-t-transparent rotate-45 box-border group-hover:border-indigo-400 transition-colors"></div>
             <div

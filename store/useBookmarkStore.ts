@@ -9,6 +9,7 @@ interface BookmarkState {
    addBookmark: (anime: AnimeCard) => void;
    removeBookmark: (mal_id: number) => void;
    toggleBookmark: (anime: AnimeCard) => boolean;
+   updateBookmarkStatus: (mal_id: number, status: string) => void;
    isBookmarked: (mal_id: number) => boolean;
 
    // 預留給未來登入/資料庫同步使用
@@ -50,6 +51,14 @@ export const useBookmarkStore = create<BookmarkState>()(
                get().addBookmark(anime);
                return true; // 回傳 true 代表已新增
             }
+         },
+
+         updateBookmarkStatus: (mal_id, status) => {
+            set((state) => ({
+               bookmarkedAnimes: state.bookmarkedAnimes.map((a) =>
+                  a.mal_id === mal_id ? { ...a, status } : a,
+               ),
+            }));
          },
 
          isBookmarked: (mal_id) =>

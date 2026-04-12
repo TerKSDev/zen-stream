@@ -1,6 +1,13 @@
 'use client';
 
-import { Fragment, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+   Fragment,
+   useMemo,
+   useState,
+   useSyncExternalStore,
+   useEffect,
+   useRef,
+} from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
@@ -18,8 +25,13 @@ import { useBookmarkStore } from '@/store/useBookmarkStore';
 import toast from 'react-hot-toast';
 
 export default function BookmarkPage() {
-   const { bookmarkedAnimes, removeBookmark, clearBookmarks } =
-      useBookmarkStore();
+   const {
+      bookmarkedAnimes,
+      removeBookmark,
+      clearBookmarks,
+      addBookmark,
+      updateBookmarkStatus,
+   } = useBookmarkStore();
    const isMounted = useSyncExternalStore(
       () => () => {},
       () => true,
@@ -28,10 +40,67 @@ export default function BookmarkPage() {
    const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
    const [searchQuery, setSearchQuery] = useState('');
    const [sortBy, setSortBy] = useState<'latest' | 'az'>('latest');
+   const [activeTab, setActiveTab] = useState<
+      'ALL' | 'watching' | 'plan_to_watch' | 'completed'
+   >('ALL');
+   const [visibleCount, setVisibleCount] = useState(24);
+   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+   // 切換過濾條件時，重置顯示數量
+   useEffect(() => {
+      setVisibleCount(24);
+   }, [searchQuery, sortBy, activeTab]);
+
+   // Intersection Observer 實作懶加載 (效能優化)
+   useEffect(() => {
+      const observer = new IntersectionObserver(
+         (entries) => {
+            if (entries[0].isIntersecting) {
+               setVisibleCount((prev) => prev + 24);
+            }
+         },
+         { rootMargin: '200px' },
+      );
+      if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+      return () => observer.disconnect();
+   }, []);
+
+   // Undo 復原刪除機制
+   const handleRemove = (e: React.MouseEvent, anime: any) => {
+      e.preventDefault();
+      removeBookmark(anime.mal_id);
+      toast(
+         (t) => (
+            <div className="flex items-center gap-3">
+               <span className="text-sm font-medium">
+                  Removed from bookmarks
+               </span>
+               <button
+                  onClick={() => {
+                     if (addBookmark) addBookmark(anime);
+                     toast.dismiss(t.id);
+                     toast.success('Restored!', { id: 'restored' });
+                  }}
+                  className="text-xs font-bold text-anime-primary bg-anime-primary/10 hover:bg-anime-primary/20 px-3 py-1.5 rounded-lg transition-colors"
+               >
+                  Undo
+               </button>
+            </div>
+         ),
+         { duration: 5000, id: `undo-${anime.mal_id}` },
+      );
+   };
 
    // 依據搜尋關鍵字與排序選項，動態過濾並排序書籤
    const filteredAndSortedAnimes = useMemo(() => {
       let result = [...bookmarkedAnimes];
+
+      // 0. 觀看狀態過濾
+      if (activeTab !== 'ALL') {
+         result = result.filter(
+            (anime) => (anime.status || 'plan_to_watch') === activeTab,
+         );
+      }
 
       // 1. 執行搜尋過濾
       if (searchQuery.trim()) {
@@ -170,6 +239,30 @@ export default function BookmarkPage() {
                </div>
             )}
 
+            {/* 觀看狀態分類 (Tabs) */}
+            {isMounted && bookmarkedAnimes.length > 0 && (
+               <div className="flex flex-wrap gap-2 mb-6">
+                  {[
+                     { id: 'ALL', label: 'All' },
+                     { id: 'watching', label: 'Watching' },
+                     { id: 'plan_to_watch', label: 'Plan to Watch' },
+                     { id: 'completed', label: 'Completed' },
+                  ].map((tab) => (
+                     <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                           activeTab === tab.id
+                              ? 'bg-anime-primary text-white shadow-[0_0_15px_rgba(160,124,254,0.4)]'
+                              : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                        }`}
+                     >
+                        {tab.label}
+                     </button>
+                  ))}
+               </div>
+            )}
+
             {/* 內容區塊 */}
             {!isMounted ? (
                /* 骨架屏 (Skeleton) - 避免載入時畫面閃爍空白，提升 UX */
@@ -189,56 +282,100 @@ export default function BookmarkPage() {
                </div>
             ) : bookmarkedAnimes.length > 0 ? (
                filteredAndSortedAnimes.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
-                     {filteredAndSortedAnimes.map((anime) => (
-                        <Link
-                           href={`/anime/${anime.mal_id}`}
-                           key={anime.mal_id}
-                           className="group relative flex flex-row sm:flex-col gap-4 sm:gap-2 bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-2xl sm:rounded-none hover:bg-white/10 sm:hover:bg-transparent transition-colors border border-white/5 sm:border-transparent"
-                        >
-                           <div className="relative w-24 sm:w-full shrink-0 aspect-3/4 overflow-hidden rounded-xl bg-[#141824] border border-white/5 shadow-lg">
-                              <Image
-                                 src={anime.images?.webp?.large_image_url || ''}
-                                 alt={anime.title}
-                                 fill
-                                 sizes="(max-width: 640px) 100px, (max-width: 1024px) 33vw, 20vw"
-                                 className="object-cover transition-transform duration-500 group-hover:scale-110"
-                              />
-                              <button
-                                 onClick={(e) => {
-                                    e.preventDefault(); // 阻止 Link 跳轉
-                                    removeBookmark(anime.mal_id);
-                                    toast.success('已從收藏中移除');
-                                 }}
-                                 title="Remove from bookmarks"
-                                 className="group/btn absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-anime-primary hover:bg-red-500/90 hover:text-white transition-all duration-300"
+                  <>
+                     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+                        {filteredAndSortedAnimes
+                           .slice(0, visibleCount)
+                           .map((anime) => (
+                              <Link
+                                 href={`/anime/${anime.mal_id}`}
+                                 key={anime.mal_id}
+                                 className="group relative flex flex-row sm:flex-col gap-4 sm:gap-2 bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-2xl sm:rounded-none hover:bg-white/10 sm:hover:bg-transparent transition-colors border border-white/5 sm:border-transparent"
                               >
-                                 <IoBookmark className="w-4 h-4 group-hover/btn:hidden" />
-                                 <IoTrashOutline className="w-4 h-4 hidden group-hover/btn:block" />
-                              </button>
-                           </div>
+                                 <div className="relative w-24 sm:w-full shrink-0 aspect-3/4 overflow-hidden rounded-xl bg-[#141824] border border-white/5 shadow-lg">
+                                    <Image
+                                       src={
+                                          anime.images?.webp?.large_image_url ||
+                                          ''
+                                       }
+                                       alt={anime.title}
+                                       fill
+                                       sizes="(max-width: 640px) 100px, (max-width: 1024px) 33vw, 20vw"
+                                       className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                    />
+                                    <button
+                                       onClick={(e) => handleRemove(e, anime)}
+                                       title="Remove from bookmarks"
+                                       className="group/btn absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-anime-primary hover:bg-red-500/90 hover:text-white transition-all duration-300"
+                                    >
+                                       <IoBookmark className="w-4 h-4 group-hover/btn:hidden" />
+                                       <IoTrashOutline className="w-4 h-4 hidden group-hover/btn:block" />
+                                    </button>
+                                 </div>
 
-                           <div className="flex-1 flex flex-col justify-center sm:justify-start min-w-0 py-1 sm:py-0">
-                              <span className="text-sm md:text-base font-bold text-white line-clamp-2 group-hover:text-anime-primary transition-colors">
-                                 {anime.title}
-                              </span>
-                              {/* 手機版專屬：橫向模式下顯示簡單評分與類型 */}
-                              <div className="flex items-center gap-3 mt-2 sm:hidden text-xs font-semibold text-slate-400">
-                                 {anime.score && (
-                                    <span className="flex items-center text-yellow-400">
-                                       ★ {anime.score}
+                                 <div className="flex-1 flex flex-col justify-center sm:justify-start min-w-0 py-1 sm:py-0">
+                                    <span className="text-sm md:text-base font-bold text-white line-clamp-2 group-hover:text-anime-primary transition-colors">
+                                       {anime.title}
                                     </span>
-                                 )}
-                                 {anime.type && (
-                                    <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] uppercase">
-                                       {anime.type}
-                                    </span>
-                                 )}
-                              </div>
-                           </div>
-                        </Link>
-                     ))}
-                  </div>
+                                    {/* 手機版專屬：橫向模式下顯示簡單評分與類型 */}
+                                    <div className="flex items-center gap-3 mt-2 sm:hidden text-xs font-semibold text-slate-400">
+                                       {anime.score && (
+                                          <span className="flex items-center text-yellow-400">
+                                             ★ {anime.score}
+                                          </span>
+                                       )}
+                                       {anime.type && (
+                                          <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] uppercase">
+                                             {anime.type}
+                                          </span>
+                                       )}
+                                    </div>
+
+                                    {/* 狀態切換下拉選單 */}
+                                    <div
+                                       className="mt-2 sm:mt-3"
+                                       onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                       }}
+                                    >
+                                       <select
+                                          value={
+                                             anime.status || 'plan_to_watch'
+                                          }
+                                          onChange={(e) =>
+                                             updateBookmarkStatus?.(
+                                                anime.mal_id,
+                                                e.target.value,
+                                             )
+                                          }
+                                          className="w-full bg-black/40 text-xs font-semibold text-slate-300 border border-white/10 rounded-lg p-1.5 outline-none focus:border-anime-primary transition-colors cursor-pointer"
+                                       >
+                                          <option value="plan_to_watch">
+                                             🗓️ Plan to Watch
+                                          </option>
+                                          <option value="watching">
+                                             ▶️ Watching
+                                          </option>
+                                          <option value="completed">
+                                             ✅ Completed
+                                          </option>
+                                       </select>
+                                    </div>
+                                 </div>
+                              </Link>
+                           ))}
+                     </div>
+                     {/* 載入更多指示器 */}
+                     {visibleCount < filteredAndSortedAnimes.length && (
+                        <div
+                           ref={loadMoreRef}
+                           className="h-10 w-full flex items-center justify-center mt-8"
+                        >
+                           <div className="w-6 h-6 border-2 border-anime-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                     )}
+                  </>
                ) : (
                   /* 搜尋無結果狀態 */
                   <div className="flex-1 flex flex-col items-center justify-center text-center mt-12 mb-24">
@@ -247,7 +384,7 @@ export default function BookmarkPage() {
                         No bookmarks found
                      </h2>
                      <p className="text-sm text-slate-400">
-                        Try adjusting your search query.
+                        Try adjusting your search query or status filter.
                      </p>
                   </div>
                )
@@ -331,7 +468,7 @@ export default function BookmarkPage() {
                                  onClick={() => {
                                     clearBookmarks();
                                     setIsClearDialogOpen(false);
-                                    toast.success('已清空所有收藏');
+                                    toast.success('All bookmarks cleared');
                                  }}
                                  className="px-5 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                               >
