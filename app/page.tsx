@@ -1,6 +1,6 @@
 // app/page.tsx
-import { getSeasonAnime } from '@/lib/jikan-api';
-import HeroSection from '@/components/sections/Hero';
+import { getSeasonAnime } from '@/lib/services/anime/jikan-api';
+import HeroSection from '@/app/_components/Hero';
 
 export default async function HomePage() {
    // 多請求一些資料作為緩衝，確保去重後還有足夠的數量

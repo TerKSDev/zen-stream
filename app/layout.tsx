@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP, Plus_Jakarta_Sans } from 'next/font/google';
 import { Suspense } from 'react';
 import './globals.css';
-import SideNav from '@/components/SideNav';
-import Header from '@/components/Header';
+import SideNav from '@/components/navigation/SideNav';
+import Header from '@/components/navigation/Header';
+import AuthSessionProvider from '@/components/providers/SessionProvider';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({
@@ -97,24 +98,26 @@ export default function RootLayout({
          className={`${inter.variable} ${notoSansJP.variable} ${plusJakartaSans.variable} antialiased`}
       >
          <body>
-            <SideNav />
-            <main className="relative flex h-screen max-h-screen min-h-0 min-w-0 flex-1 flex-col">
-               <Suspense fallback={null}>
-                  <Header />
-               </Suspense>
-               {children}
-               {/* 全域 Toast 提示設定 */}
-               <Toaster
-                  position="bottom-right"
-                  toastOptions={{
-                     style: {
-                        background: '#141824',
-                        color: '#fff',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                     },
-                  }}
-               />
-            </main>
+            <AuthSessionProvider>
+               <SideNav />
+               <main className="relative flex h-screen max-h-screen min-h-0 min-w-0 flex-1 flex-col">
+                  <Suspense fallback={null}>
+                     <Header />
+                  </Suspense>
+                  {children}
+                  {/* 全域 Toast 提示設定 */}
+                  <Toaster
+                     position="bottom-right"
+                     toastOptions={{
+                        style: {
+                           background: '#141824',
+                           color: '#fff',
+                           border: '1px solid rgba(255,255,255,0.1)',
+                        },
+                     }}
+                  />
+               </main>
+            </AuthSessionProvider>
          </body>
       </html>
    );

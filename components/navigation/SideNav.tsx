@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ROUTES } from '@/lib/config/route';
+import { ROUTES } from '@/lib/config/routes';
 import Link from 'next/link';
 import { IoChatbubbleEllipsesSharp } from 'react-icons/io5';
 import { usePathname } from 'next/navigation';
-import FeedbackModal from './FeedbackModal';
+import FeedbackModal from '@/components/modals/FeedbackModal';
 
 export default function SideNav() {
    const pathname = usePathname();

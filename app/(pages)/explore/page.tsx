@@ -1,34 +1,16 @@
 // 這是 app/(pages)/explore/page.tsx (與客戶端分離的 Server Component)
 import { IoCompassOutline } from 'react-icons/io5';
 import ExploreClient from './_components/ExploreClient';
+import {
+   dedupeByMalId,
+   fetchJikanList,
+   translateAnimeSearchQuery,
+} from '@/lib/services/anime/anime-fetch';
 import type {
    AnimeCard,
    ExploreSectionData,
    JikanListResponse,
-} from '@/lib/types/anime';
-
-// 多語言翻譯層：將中/日文標題透過 Anilist 轉換為 Romaji/English 讓 Jikan 精準搜尋
-async function translateSearchQuery(query: string): Promise<string> {
-   if (!query || !/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/.test(query)) {
-      return query;
-   }
-   try {
-      const res = await fetch('https://graphql.anilist.co', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-            query: `query($search: String) { Media(search: $search, type: ANIME, sort: SEARCH_MATCH) { title { romaji english } } }`,
-            variables: { search: query }
-         })
-      });
-      if (!res.ok) return query;
-      const data = await res.json();
-      const title = data?.data?.Media?.title;
-      return title?.romaji || title?.english || query;
-   } catch {
-      return query;
-   }
-}
+} from '@/types/anime';
 
 function pickParamValue(value: string | string[] | undefined): string {
    if (Array.isArray(value)) {
@@ -57,22 +39,6 @@ function getCurrentWeekday() {
    };
 }
 
-async function fetchAnimeList(
-   url: string,
-): Promise<JikanListResponse<AnimeCard> | null> {
-   try {
-      const response = await fetch(url, {
-         next: { revalidate: 1800 },
-      });
-      if (!response.ok) {
-         return null;
-      }
-      return (await response.json()) as JikanListResponse<AnimeCard>;
-   } catch (error) {
-      return null;
-   }
-}
-
 export default async function ExplorePage({
    searchParams,
 }: {
@@ -91,6 +57,7 @@ export default async function ExplorePage({
 
    let initialAnime: AnimeCard[] = [];
    let initialHasMore = false;
+   let initialTotal = 0;
 
    if (isSearchMode) {
       const searchParamsValue = new URLSearchParams({
@@ -110,20 +77,23 @@ export default async function ExplorePage({
       if (genre) searchParamsValue.set('genres', genre);
       if (status) searchParamsValue.set('status', status);
       if (type) searchParamsValue.set('type', type);
-      
+
       if (q) {
          // 攔截並翻譯 CJK 查詢字串
-         const translatedQ = await translateSearchQuery(q);
+         const translatedQ = await translateAnimeSearchQuery(q);
          searchParamsValue.set('q', translatedQ);
       }
 
-      const searchData = await fetchAnimeList(
+      const searchData = await fetchJikanList(
          `https://api.jikan.moe/v4/anime?${searchParamsValue.toString()}`,
+         {
+            next: { revalidate: 1800 },
+         },
       );
-      initialAnime = Array.from(
-         new Map((searchData?.data || []).map((item) => [item.mal_id, item])).values(),
-      ) as AnimeCard[];
+      initialAnime = dedupeByMalId(searchData?.data || []);
       initialHasMore = Boolean(searchData?.pagination?.has_next_page);
+      initialTotal =
+         searchData?.pagination?.items?.total || initialAnime.length;
    }
 
    const weekday = getCurrentWeekday();
@@ -135,16 +105,25 @@ export default async function ExplorePage({
    // 效能與 Rate Limit 優化：如果正在搜尋，就不要浪費資源去抓不會顯示的推薦清單
    if (!isSearchMode) {
       const results = await Promise.all([
-            fetchAnimeList(
-               'https://api.jikan.moe/v4/top/anime?filter=bypopularity&limit=24',
-            ),
-            fetchAnimeList(
-               `https://api.jikan.moe/v4/schedules?filter=${weekday.key}&limit=24`,
-            ),
-            fetchAnimeList(
-               'https://api.jikan.moe/v4/seasons/now?limit=24&order_by=score&sort=desc',
-            ),
-         ]);
+         fetchJikanList(
+            'https://api.jikan.moe/v4/top/anime?filter=bypopularity&limit=24',
+            {
+               next: { revalidate: 1800 },
+            },
+         ),
+         fetchJikanList(
+            `https://api.jikan.moe/v4/schedules?filter=${weekday.key}&limit=24`,
+            {
+               next: { revalidate: 1800 },
+            },
+         ),
+         fetchJikanList(
+            'https://api.jikan.moe/v4/seasons/now?limit=24&order_by=score&sort=desc',
+            {
+               next: { revalidate: 1800 },
+            },
+         ),
+      ]);
       trendingData = results[0];
       newReleaseData = results[1];
       seasonHighlightData = results[2];
@@ -226,6 +205,7 @@ export default async function ExplorePage({
             initialType={type}
             initialSort={sort}
             initialQuery={q}
+            initialTotal={initialTotal}
             initialWeekday={weekday.key}
             initialSchedule={uniqueSchedule}
             sections={sections}

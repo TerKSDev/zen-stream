@@ -34,7 +34,7 @@ export default function AnimeRecommendations({
                <Link
                   key={rec.entry.mal_id}
                   href={`/anime/${rec.entry.mal_id}`}
-                  className="flex-none w-[140px] md:w-[160px] group relative rounded-xl overflow-hidden aspect-[3/4] border border-white/5 hover:border-anime-primary/50 transition-all shadow-lg hover:shadow-[0_0_20px_rgba(160,124,254,0.3)]"
+                  className="flex-none w-35 md:w-40 group relative rounded-xl overflow-hidden aspect-3/4 border border-white/5 hover:border-anime-primary/50 transition-all shadow-lg hover:shadow-[0_0_20px_rgba(160,124,254,0.3)]"
                >
                   <Image
                      src={rec.entry.images.webp.large_image_url}

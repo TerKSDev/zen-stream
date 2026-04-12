@@ -8,7 +8,7 @@ import {
    IoPauseOutline,
 } from 'react-icons/io5';
 import Link from 'next/link';
-import type { AnimeCard, AnimeGenre } from '@/lib/types/anime';
+import type { AnimeCard, AnimeGenre } from '@/types/anime';
 
 interface HeroSlideshowProps {
    animes: AnimeCard[];
@@ -121,7 +121,7 @@ export default function HeroSection({
 
    return (
       <div
-         className="relative w-full h-[100svh] flex flex-col overflow-hidden group bg-[#0B0E14]"
+         className="relative w-full h-svh flex flex-col overflow-hidden group bg-[#0B0E14]"
          onMouseEnter={() => setIsHovered(true)}
          onMouseLeave={() => setIsHovered(false)}
          onTouchStart={handleTouchStart}
@@ -188,7 +188,7 @@ export default function HeroSection({
                const isActive = index === activeIndex;
                const bgApi =
                   anime?.bannerImage || anime?.images?.webp?.large_image_url;
-               const bgLocal = `/top_season_anime/top_${index + 1}.jpeg`;
+               const bgLocal = '/icon.png';
 
                return (
                   <Image
@@ -327,7 +327,7 @@ export default function HeroSection({
                                     sizes="(max-width: 768px) 100px, 130px"
                                  />
                                  <div
-                                    className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/40 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-80 group-hover/item:opacity-100'}`}
+                                    className={`absolute inset-0 bg-linear-to-t from-black/95 via-black/20 to-black/40 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-80 group-hover/item:opacity-100'}`}
                                  />
 
                                  <div

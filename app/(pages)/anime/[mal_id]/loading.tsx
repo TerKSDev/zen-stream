@@ -11,8 +11,8 @@ export default function Loading() {
             <div className="px-6 md:px-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-10 lg:gap-14">
                {/* 左側：海報與按鈕 */}
                <div className="flex flex-col gap-6 items-center lg:items-start w-full">
-                  <div className="w-56 lg:w-full aspect-[3/4] rounded-2xl bg-white/5 border border-white/10 animate-pulse shadow-2xl" />
-                  <div className="w-full h-[52px] bg-white/5 border border-white/10 rounded-xl animate-pulse" />
+                  <div className="w-56 lg:w-full aspect-3/4 rounded-2xl bg-white/5 border border-white/10 animate-pulse shadow-2xl" />
+                  <div className="w-full h-13 bg-white/5 border border-white/10 rounded-xl animate-pulse" />
 
                   {/* 相關動漫 (Related Media) 骨架屏 */}
                   <div className="w-full mt-2 bg-white/5 border border-white/10 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
@@ -78,7 +78,10 @@ export default function Loading() {
                      </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                           <div key={i} className="h-20 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+                           <div
+                              key={i}
+                              className="h-20 rounded-xl bg-white/5 border border-white/10 animate-pulse"
+                           />
                         ))}
                      </div>
                   </div>
@@ -93,7 +96,10 @@ export default function Loading() {
                </div>
                <div className="flex overflow-hidden gap-4 pb-4">
                   {[...Array(5)].map((_, i) => (
-                     <div key={i} className="w-[320px] md:w-[360px] h-24 shrink-0 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+                     <div
+                        key={i}
+                        className="w-80 md:w-90 h-24 shrink-0 rounded-xl bg-white/5 border border-white/10 animate-pulse"
+                     />
                   ))}
                </div>
             </div>

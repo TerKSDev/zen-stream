@@ -45,10 +45,10 @@ export default function AnimeCharacters({ characters }: AnimeCharactersProps) {
                return (
                   <div
                      key={`${character.mal_id}-${idx}`}
-                     className="flex bg-white/5 border border-white/10 rounded-xl overflow-hidden shrink-0 w-[320px] md:w-[360px] h-24 snap-start hover:bg-white/10 hover:border-white/20 hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-all duration-300 group"
+                     className="flex bg-white/5 border border-white/10 rounded-xl overflow-hidden shrink-0 w-80 md:w-90 h-24 snap-start hover:bg-white/10 hover:border-white/20 hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-all duration-300 group"
                   >
                      {/* 左側：角色 (Character) */}
-                     <div className="flex flex-1 items-center gap-3 p-2 bg-gradient-to-r from-black/40 to-transparent w-1/2">
+                     <div className="flex flex-1 items-center gap-3 p-2 bg-linear-to-r from-black/40 to-transparent w-1/2">
                         <div className="relative w-14 h-full rounded-md overflow-hidden shrink-0">
                            {character.images?.webp?.image_url && (
                               <Image
@@ -71,7 +71,7 @@ export default function AnimeCharacters({ characters }: AnimeCharactersProps) {
 
                      {/* 右側：聲優 (Voice Actor) */}
                      {va && (
-                        <div className="flex flex-1 flex-row-reverse items-center gap-3 p-2 text-right bg-gradient-to-l from-black/40 to-transparent w-1/2">
+                        <div className="flex flex-1 flex-row-reverse items-center gap-3 p-2 text-right bg-linear-to-l from-black/40 to-transparent w-1/2">
                            <div className="relative w-14 h-full rounded-md overflow-hidden shrink-0">
                               {va.person.images?.jpg?.image_url && (
                                  <Image

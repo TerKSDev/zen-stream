@@ -18,17 +18,17 @@ import {
    IoHeart,
    IoHeartOutline,
    IoPlayCircle,
-   IoSearch,
    IoStar,
    IoCalendarOutline,
-   IoCompassOutline,
+   IoPlanetOutline,
 } from 'react-icons/io5';
-import { PATHS } from '@/lib/config/route';
-import type {
-   AnimeCard,
-   ExploreSectionData,
-   JikanListResponse,
-} from '@/lib/types/anime';
+import {
+   dedupeByMalId,
+   fetchJikanList,
+   translateAnimeSearchQuery,
+} from '@/lib/services/anime/anime-fetch';
+import { PATHS } from '@/lib/config/routes';
+import type { AnimeCard, ExploreSectionData } from '@/types/anime';
 
 type FilterOption = {
    id: string;
@@ -43,6 +43,7 @@ interface ExploreClientProps {
    initialType: string;
    initialSort: string;
    initialQuery: string;
+   initialTotal: number;
    initialWeekday: string;
    initialSchedule: AnimeCard[];
    sections: ExploreSectionData[];
@@ -175,6 +176,7 @@ export default function ExploreClient({
    initialType,
    initialSort,
    initialQuery,
+   initialTotal,
    initialWeekday,
    initialSchedule,
    sections,
@@ -191,6 +193,7 @@ export default function ExploreClient({
    const [selectedType, setSelectedType] = useState(initialType);
    const [selectedSort, setSelectedSort] = useState(initialSort);
    const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+   const [totalResults, setTotalResults] = useState(initialTotal);
 
    const [selectedDay, setSelectedDay] = useState(initialWeekday);
    const [scheduleCache, setScheduleCache] = useState<
@@ -223,7 +226,11 @@ export default function ExploreClient({
    // 初始化 JST 時間，每分鐘更新一次確保即時狀態 (呼吸燈特效使用)
    useEffect(() => {
       const updateJST = () => {
-         setCurrentTimeJST(new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' })));
+         setCurrentTimeJST(
+            new Date(
+               new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }),
+            ),
+         );
       };
       updateJST();
       const timer = setInterval(updateJST, 60000);
@@ -249,7 +256,12 @@ export default function ExploreClient({
    const toggleFavorite = useCallback((animeId: number) => {
       setFavoriteIds((prev) => {
          const next = new Set(prev);
-         next.has(animeId) ? next.delete(animeId) : next.add(animeId);
+         if (next.has(animeId)) {
+            next.delete(animeId);
+         } else {
+            next.add(animeId);
+         }
+
          if (typeof window !== 'undefined')
             localStorage.setItem(
                FAVORITES_KEY,
@@ -265,7 +277,7 @@ export default function ExploreClient({
             limit: '24',
             page: String(pageNumber),
          });
-         
+
          const q = overrideQuery !== undefined ? overrideQuery : searchQuery;
          if (q) params.set('q', q);
 
@@ -319,46 +331,25 @@ export default function ExploreClient({
       const timerId = window.setTimeout(async () => {
          try {
             let activeQuery = searchQuery;
-            
-            // 如果字串包含中日韓文，透過 Anilist 即時翻譯成 Romaji，解決 Jikan 找不到中文與少於 3 個字的 Bug
-            if (activeQuery && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/.test(activeQuery)) {
-               try {
-                  const transRes = await fetch('https://graphql.anilist.co', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({
-                        query: `query($search: String) { Media(search: $search, type: ANIME, sort: SEARCH_MATCH) { title { romaji english } } }`,
-                        variables: { search: activeQuery }
-                     })
-                  });
-                  if (transRes.ok) {
-                     const transData = await transRes.json();
-                     const title = transData?.data?.Media?.title;
-                     activeQuery = title?.romaji || title?.english || activeQuery;
-                  }
-               } catch (e) { /* fallback to original query */ }
-            }
+
+            activeQuery = await translateAnimeSearchQuery(activeQuery);
 
             activeSearchQueryRef.current = activeQuery;
 
-            const response = await fetch(
+            const data = await fetchJikanList(
                `https://api.jikan.moe/v4/anime?${buildSearchParams(1, activeQuery).toString()}`,
             );
-            if (!response.ok) {
+            if (!data) {
                setAnimeList([]);
                setHasMore(false);
+               setTotalResults(0);
                return; // 遇到 400 (字數不夠) 或 429 (Rate Limit) 時，優雅地清空結果，不拋出錯誤
             }
 
-            const data =
-               (await response.json()) as JikanListResponse<AnimeCard>;
-            const uniqueData = Array.from(
-               new Map(
-                  (data.data || []).map((item) => [item.mal_id, item]),
-               ).values(),
-            ) as AnimeCard[];
+            const uniqueData = dedupeByMalId(data.data || []);
             setAnimeList(uniqueData);
             setHasMore(Boolean(data.pagination?.has_next_page));
+            setTotalResults(data.pagination?.items?.total || uniqueData.length);
             setPage(1);
          } catch (error) {
             console.error(error);
@@ -384,22 +375,17 @@ export default function ExploreClient({
       setLoading(true);
       const nextPage = page + 1;
       try {
-         const response = await fetch(
+         const data = await fetchJikanList(
             `https://api.jikan.moe/v4/anime?${buildSearchParams(nextPage, activeSearchQueryRef.current).toString()}`,
          );
-         if (!response.ok) {
+         if (!data) {
             setHasMore(false);
             return;
          }
 
-         const data = (await response.json()) as JikanListResponse<AnimeCard>;
          setAnimeList((prev) => {
             const existingIds = new Set(prev.map((a) => a.mal_id));
-            const incomingUnique = Array.from(
-               new Map(
-                  (data.data || []).map((item) => [item.mal_id, item]),
-               ).values(),
-            ) as AnimeCard[];
+            const incomingUnique = dedupeByMalId(data.data || []);
             const incoming = incomingUnique.filter(
                (a) => !existingIds.has(a.mal_id),
             );
@@ -437,16 +423,11 @@ export default function ExploreClient({
 
       setScheduleLoading(true);
       try {
-         const res = await fetch(
+         const data = await fetchJikanList(
             `https://api.jikan.moe/v4/schedules?filter=${day}`,
          );
-         if (!res.ok) throw new Error('Failed to fetch schedule');
-         const data = await res.json();
-         const uniqueData = Array.from(
-            new Map(
-               (data.data || []).map((item: AnimeCard) => [item.mal_id, item]),
-            ).values(),
-         ) as AnimeCard[];
+         if (!data) throw new Error('Failed to fetch schedule');
+         const uniqueData = dedupeByMalId(data.data || []);
          setScheduleCache((prev) => ({ ...prev, [day]: uniqueData }));
       } catch (error) {
          console.error('Error fetching schedule:', error);
@@ -551,7 +532,21 @@ export default function ExploreClient({
                {/* 主內容區：搜尋模式 或 推薦分類 */}
                {isSearchMode ? (
                   /* 搜尋結果清單 */
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-4 w-full">
+                     <div className="flex items-center justify-between px-1 mb-1">
+                        <h2 className="text-xl font-black text-white tracking-wide">
+                           Results
+                        </h2>
+                        {!loading && (
+                           <span className="text-sm font-medium text-slate-400">
+                              <strong className="text-anime-primary font-bold text-base mr-1">
+                                 {totalResults}
+                              </strong>{' '}
+                              Anime Found
+                           </span>
+                        )}
+                     </div>
+
                      {loading && page === 1 ? (
                         [...Array(8)].map((_, idx) => (
                            <div
@@ -635,8 +630,15 @@ export default function ExploreClient({
                            );
                         })
                      ) : (
-                        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-slate-400">
-                           No Results Found.
+                        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-16 text-center text-slate-400 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]">
+                           <IoPlanetOutline className="mb-4 h-16 w-16 text-anime-primary/40 animate-pulse drop-shadow-[0_0_15px_rgba(160,124,254,0.4)]" />
+                           <h3 className="text-lg font-bold text-white mb-2">
+                              No Anime Found...
+                           </h3>
+                           <p className="text-sm text-slate-400 max-w-sm">
+                              It seems lost in space. Try adjusting your filters
+                              or search keywords!
+                           </p>
                         </div>
                      )}
                      {hasMore && animeList.length > 0 && (
@@ -722,6 +724,18 @@ export default function ExploreClient({
                               size={20}
                            />
                            Weekly Schedule
+                           {currentTimeJST && (
+                              <span className="ml-2 text-xs font-bold text-slate-400 bg-black/40 px-2 py-1 rounded-md border border-white/5 tracking-widest">
+                                 {String(
+                                    currentTimeJST.getMonth() + 1,
+                                 ).padStart(2, '0')}
+                                 /
+                                 {String(currentTimeJST.getDate()).padStart(
+                                    2,
+                                    '0',
+                                 )}
+                              </span>
+                           )}
                         </h2>
                      </div>
 
@@ -758,86 +772,108 @@ export default function ExploreClient({
                                  let isAiringNow = false;
                                  if (currentTimeJST && anime.broadcast?.time) {
                                     const currentDayJST = [
-                                       'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+                                       'sunday',
+                                       'monday',
+                                       'tuesday',
+                                       'wednesday',
+                                       'thursday',
+                                       'friday',
+                                       'saturday',
                                     ][currentTimeJST.getDay()];
-                                    
+
                                     if (selectedDay === currentDayJST) {
-                                       const currentMinutes = currentTimeJST.getHours() * 60 + currentTimeJST.getMinutes();
-                                       const [bHour, bMinute] = anime.broadcast.time.split(':').map(Number);
+                                       const currentMinutes =
+                                          currentTimeJST.getHours() * 60 +
+                                          currentTimeJST.getMinutes();
+                                       const [bHour, bMinute] =
+                                          anime.broadcast.time
+                                             .split(':')
+                                             .map(Number);
                                        if (!isNaN(bHour) && !isNaN(bMinute)) {
                                           const bMinutes = bHour * 60 + bMinute;
-                                          let diff = Math.abs(currentMinutes - bMinutes);
-                                          if (diff > 12 * 60) diff = 24 * 60 - diff;
+                                          let diff = Math.abs(
+                                             currentMinutes - bMinutes,
+                                          );
+                                          if (diff > 12 * 60)
+                                             diff = 24 * 60 - diff;
                                           isAiringNow = diff <= 60; // 差距在 1 小時內
                                        }
                                     }
                                  }
 
                                  return (
-                                 <Link
-                                    key={`sched-${anime.mal_id}-${idx}`}
-                                    href={`/anime/${anime.mal_id}`}
-                                    className={`relative group flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-white/5 border ${
-                                       isAiringNow
-                                          ? 'bg-anime-primary/5 border-anime-primary/30'
-                                          : 'border-transparent hover:border-white/10'
-                                    }`}
-                                 >
-                                    {/* 呼吸燈邊框特效 */}
-                                    {isAiringNow && (
-                                       <div className="absolute inset-0 rounded-xl border border-anime-primary shadow-[0_0_15px_rgba(160,124,254,0.4)] animate-pulse pointer-events-none" />
-                                    )}
+                                    <Link
+                                       key={`sched-${anime.mal_id}-${idx}`}
+                                       href={`/anime/${anime.mal_id}`}
+                                       className={`relative group flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-white/5 border ${
+                                          isAiringNow
+                                             ? 'bg-anime-primary/5 border-anime-primary/30'
+                                             : 'border-transparent hover:border-white/10'
+                                       }`}
+                                    >
+                                       {/* 呼吸燈邊框特效 */}
+                                       {isAiringNow && (
+                                          <div className="absolute inset-0 rounded-xl border border-anime-primary shadow-[0_0_15px_rgba(160,124,254,0.4)] animate-pulse pointer-events-none" />
+                                       )}
 
-                                    {/* 縮圖 */}
-                                    <div className="relative h-14 w-10 shrink-0 rounded-md overflow-hidden bg-white/5">
-                                       <Image
-                                          src={
-                                             anime.images.webp.large_image_url
-                                          }
-                                          alt={anime.title}
-                                          fill
-                                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                          sizes="40px"
-                                       />
-                                    </div>
-
-                                    {/* 標題與時間 */}
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                       <span className="line-clamp-1 text-sm font-bold text-slate-300 group-hover:text-white transition-colors">
-                                          {anime.title_english || anime.title}
-                                       </span>
-                                       <div className="flex items-center gap-2 mt-1">
-                                          <span className="flex items-center gap-1 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
-                                             <IoStar
-                                                className="text-yellow-400"
-                                                size={10}
-                                             />
-                                             {anime.score || '-.--'}
-                                          </span>
-                                          {anime.broadcast?.time && (
-                                             <span className="text-[10px] font-mono text-anime-primary tracking-wider">
-                                                {anime.broadcast.time}
-                                             </span>
-                                          )}
-                                          {isAiringNow ? (
-                                             <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-anime-primary/20 text-anime-primary border border-anime-primary/30 animate-pulse relative z-10">
-                                                LIVE
-                                             </span>
-                                          ) : anime.status === 'Currently Airing' && (
-                                             <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 relative z-10">
-                                                NEW
-                                             </span>
-                                          )}
+                                       {/* 縮圖 */}
+                                       <div className="relative h-14 w-10 shrink-0 rounded-md overflow-hidden bg-white/5">
+                                          <Image
+                                             src={
+                                                anime.images.webp
+                                                   .large_image_url
+                                             }
+                                             alt={anime.title}
+                                             fill
+                                             className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                             sizes="40px"
+                                          />
                                        </div>
-                                    </div>
 
-                                    {/* Hover 顯示的播放按鈕 */}
-                                    <div className="shrink-0 flex items-center justify-center opacity-0 -translate-x-3 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 pr-1 relative z-10">
-                                       <IoPlayCircle className="text-anime-primary drop-shadow-[0_0_10px_rgba(160,124,254,0.6)]" size={28} />
-                                    </div>
-                                 </Link>
+                                       {/* 標題與時間 */}
+                                       <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                          <span className="line-clamp-1 text-sm font-bold text-slate-300 group-hover:text-white transition-colors">
+                                             {anime.title_english ||
+                                                anime.title}
+                                          </span>
+                                          <div className="flex items-center gap-2 mt-1">
+                                             <span className="flex items-center gap-1 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                                                <IoStar
+                                                   className="text-yellow-400"
+                                                   size={10}
+                                                />
+                                                {anime.score || '-.--'}
+                                             </span>
+                                             {anime.broadcast?.time && (
+                                                <span className="text-[10px] font-mono text-anime-primary tracking-wider">
+                                                   {anime.broadcast.time}
+                                                </span>
+                                             )}
+                                             {isAiringNow ? (
+                                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-anime-primary/20 text-anime-primary border border-anime-primary/30 animate-pulse relative z-10">
+                                                   LIVE
+                                                </span>
+                                             ) : (
+                                                anime.status ===
+                                                   'Currently Airing' && (
+                                                   <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 relative z-10">
+                                                      NEW
+                                                   </span>
+                                                )
+                                             )}
+                                          </div>
+                                       </div>
+
+                                       {/* Hover 顯示的播放按鈕 */}
+                                       <div className="shrink-0 flex items-center justify-center opacity-0 -translate-x-3 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 pr-1 relative z-10">
+                                          <IoPlayCircle
+                                             className="text-anime-primary drop-shadow-[0_0_10px_rgba(160,124,254,0.6)]"
+                                             size={28}
+                                          />
+                                       </div>
+                                    </Link>
                                  );
-                              }
+                              },
                            )
                         ) : (
                            <div className="flex-1 flex flex-col items-center justify-center py-10 text-slate-500">

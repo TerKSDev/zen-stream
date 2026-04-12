@@ -1,24 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { IoArrowBack } from 'react-icons/io5';
+import { IoPlayCircle } from 'react-icons/io5';
 import BookmarkButton from '@/components/features/BookmarkButton';
-import ShareButton from '@/components/features/ShareButton';
 import { useFloatingActionBarVisibility } from '@/hooks/useFloatingActionBarVisibility';
 import type { AnimeCard } from '@/types/anime';
 
-export default function PlayerMobileActionBar({
+export default function MobileActionBar({
    mal_id,
    anime,
-   displayTitle,
-   currentEpNumber,
 }: {
    mal_id: string;
    anime: AnimeCard;
-   displayTitle: string;
-   currentEpNumber: string;
 }) {
-   const isVisible = useFloatingActionBarVisibility('mobile-player');
+   const isVisible = useFloatingActionBarVisibility('mobile-poster');
 
    return (
       <div
@@ -29,18 +24,14 @@ export default function PlayerMobileActionBar({
          }`}
       >
          <Link
-            href={`/anime/${mal_id}`}
+            href={`/player/${mal_id}/1`}
             className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-anime-primary text-white text-base font-bold rounded-xl hover:bg-anime-primary/90 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(160,124,254,0.4)]"
          >
-            <IoArrowBack className="w-5 h-5" />
-            Details
+            <IoPlayCircle className="w-6 h-6" />
+            Watch Now
          </Link>
          <BookmarkButton
             anime={anime}
-            className="w-12 h-12 shrink-0 p-0 flex items-center justify-center bg-white/5 hover:bg-white/10 border-white/10 rounded-xl [&>span]:hidden"
-         />
-         <ShareButton
-            title={`${displayTitle} - Episode ${currentEpNumber} | ZenStream`}
             className="w-12 h-12 shrink-0 p-0 flex items-center justify-center bg-white/5 hover:bg-white/10 border-white/10 rounded-xl [&>span]:hidden"
          />
       </div>

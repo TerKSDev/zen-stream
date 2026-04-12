@@ -39,7 +39,7 @@ export default function PosterLightbox({
          <Transition appear show={isOpen} as={Fragment}>
             <Dialog
                as="div"
-               className="relative z-[100]"
+               className="relative z-100"
                onClose={() => setIsOpen(false)}
             >
                <Transition.Child

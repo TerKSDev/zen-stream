@@ -12,6 +12,7 @@ export interface AnimeCard {
    mal_id: number;
    title: string;
    title_english?: string | null;
+   title_japanese?: string | null;
    images: {
       webp: AnimeImageWebp;
    };
@@ -158,5 +159,8 @@ export interface JikanListResponse<T> {
    data: T[];
    pagination?: {
       has_next_page?: boolean;
+      items?: {
+         total?: number;
+      };
    };
 }

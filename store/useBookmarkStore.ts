@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AnimeCard } from '@/lib/types/anime';
+import type { AnimeCard } from '@/types/anime';
 
 interface BookmarkState {
    bookmarkedAnimes: AnimeCard[];

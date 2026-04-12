@@ -2,10 +2,9 @@ import type {
    AniListBannerLookupResponse,
    AnimeCard,
    JikanListResponse,
-} from '@/lib/types/anime';
+} from '@/types/anime';
 
-// lib/api.ts
-export async function fetchJikan(url: string) {
+export async function fetchJikan<T = unknown>(url: string): Promise<T | null> {
    const retries = 4;
    let delay = 2000;
 
@@ -14,7 +13,7 @@ export async function fetchJikan(url: string) {
          const res = await fetch(url, { cache: 'no-store' });
 
          if (res.ok) {
-            return await res.json();
+            return (await res.json()) as T;
          }
 
          if (res.status === 429) {

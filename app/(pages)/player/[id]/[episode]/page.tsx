@@ -3,20 +3,22 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { IoArrowBack, IoPlayCircle } from 'react-icons/io5';
 import VideoPlayer from './_components/VideoPlayer';
+import {
+   buildEpisodeFallbackFromAniList,
+   fetchAniListMediaByMalId,
+} from '@/lib/services/anime/anime-fetch';
 import { fetchVideoStream } from '@/app/_actions/anime';
 import EpisodeList from './_components/EpisodeList';
 import AnimeRecommendations from '@/app/(pages)/anime/[mal_id]/_components/AnimeRecommendations';
-import ShareButton from '@/components/ui/ShareButton';
+import ShareButton from '@/components/features/ShareButton';
 import PlayerMobileActionBar from './_components/PlayerMobileActionBar';
+import { fetchJikan } from '@/lib/services/anime/jikan-api';
 import type {
-   AniListMediaResponse,
    AnimeDetail,
    EpisodeData,
-   JikanListResponse,
-   JikanSingleResponse,
    PlaylistEpisode,
    RecommendationData,
-} from '@/lib/types/anime';
+} from '@/types/anime';
 
 // ==========================================
 // 異步抓取器：專門負責等水母抓影片 (不會阻塞主頁面渲染)
@@ -27,12 +29,18 @@ async function StreamFetcher({
    malId,
    bgImage,
    episodes,
+   historyMeta,
 }: {
    searchQuery: string;
    currentEpNumber: string;
    malId: string;
    bgImage: string;
    episodes: PlaylistEpisode[];
+   historyMeta: {
+      mal_id: number;
+      title: string;
+      image: string;
+   };
 }) {
    const streamData = await fetchVideoStream(searchQuery, currentEpNumber);
    const streamUrl = streamData.success ? streamData.videoUrl : null;
@@ -76,6 +84,7 @@ async function StreamFetcher({
          malId={malId}
          currentEpNumber={currentEpNumber}
          episodes={episodes}
+         historyMeta={historyMeta}
       />
    );
 }
@@ -130,10 +139,10 @@ export default async function AnimeWatchPage({
    const currentEpNumber = resolvedParams.episode || '1';
 
    // 1. Fetch anime details (極快)
-   const jikanRes = await fetch(`https://api.jikan.moe/v4/anime/${malId}`);
-   const jikanData =
-      (await jikanRes.json()) as JikanSingleResponse<AnimeDetail>;
-   const anime = jikanData.data;
+   const jikanData = await fetchJikan<{ data: AnimeDetail }>(
+      `https://api.jikan.moe/v4/anime/${malId}`,
+   );
+   const anime = jikanData?.data;
 
    if (!anime) {
       return (
@@ -146,75 +155,27 @@ export default async function AnimeWatchPage({
    }
 
    // 2. Fetch Playlist (極快)
-   const query = `
-      query ($id: Int) {
-         Media(idMal: $id, type: ANIME) {
-            bannerImage
-            episodes
-            nextAiringEpisode { episode }
-            streamingEpisodes { title }
-         }
-      }
-   `;
-
-   const anilistPromise = fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-         'Content-Type': 'application/json',
-         Accept: 'application/json',
-      },
-      body: JSON.stringify({ query, variables: { id: parseInt(malId) } }),
-      cache: 'no-store',
-   }).catch(() => null);
+   const anilistPromise = fetchAniListMediaByMalId(parseInt(malId, 10));
 
    await new Promise((resolve) => setTimeout(resolve, 800)); // Rate limit buffer
-   const episodesRes = await fetch(
+   const episodesData = await fetchJikan<{ data: EpisodeData[] }>(
       `https://api.jikan.moe/v4/anime/${malId}/episodes`,
-   ).catch(() => null);
+   );
 
    // 延遲 800 毫秒後請求推薦動漫，避免觸發 429 Rate Limit
    await new Promise((resolve) => setTimeout(resolve, 800));
-   const recommendationsRes = await fetch(
+   const recommendationsData = await fetchJikan<{ data: RecommendationData[] }>(
       `https://api.jikan.moe/v4/anime/${malId}/recommendations`,
-   ).catch(() => null);
-   const recommendationsData = recommendationsRes?.ok
-      ? ((await recommendationsRes.json()) as JikanListResponse<RecommendationData>)
-      : null;
+   );
    const recommendations = recommendationsData?.data || [];
 
-   const anilistRes = await anilistPromise;
-   const anilistData = anilistRes?.ok
-      ? ((await anilistRes.json()) as AniListMediaResponse)
-      : null;
-   const media = anilistData?.data?.Media;
+   const media = await anilistPromise;
    const bannerImage = media?.bannerImage;
 
-   const episodesData = episodesRes?.ok
-      ? ((await episodesRes.json()) as JikanListResponse<EpisodeData>)
-      : null;
    let rawEpisodes: EpisodeData[] = episodesData?.data || [];
 
-   if (rawEpisodes.length === 0 && media) {
-      const airedCount = media.nextAiringEpisode
-         ? media.nextAiringEpisode.episode - 1
-         : media.episodes || 0;
-      if (airedCount > 0) {
-         rawEpisodes = Array.from({ length: airedCount }, (_, i) => {
-            const epNum = i + 1;
-            const streamEp = media.streamingEpisodes?.find(
-               (ep) =>
-                  ep.title.startsWith(`Episode ${epNum} `) ||
-                  ep.title === `Episode ${epNum}`,
-            );
-            let title = `Episode ${epNum}`;
-            if (streamEp && streamEp.title.includes(' - ')) {
-               title = streamEp.title.split(' - ').slice(1).join(' - ').trim();
-            } else if (streamEp) {
-               title = streamEp.title;
-            }
-            return { mal_id: epNum, title };
-         });
-      }
+   if (rawEpisodes.length === 0) {
+      rawEpisodes = buildEpisodeFallbackFromAniList(media);
    }
 
    const episodes: PlaylistEpisode[] = rawEpisodes.map((ep) => ({
@@ -244,6 +205,11 @@ export default async function AnimeWatchPage({
       (ep) => ep.number.toString() === currentEpNumber,
    ) || { number: currentEpNumber, title: `Episode ${currentEpNumber}` };
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
+   const historyMeta = {
+      mal_id: Number(malId),
+      title: displayTitle,
+      image: anime.images?.webp?.large_image_url || bgImage || '',
+   };
 
    return (
       <main
@@ -293,6 +259,7 @@ export default async function AnimeWatchPage({
                         malId={malId}
                         bgImage={bgImage}
                         episodes={episodes}
+                        historyMeta={historyMeta}
                      />
                   </Suspense>
                </div>

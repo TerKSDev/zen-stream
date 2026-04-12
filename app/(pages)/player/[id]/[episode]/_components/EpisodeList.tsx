@@ -9,7 +9,7 @@ import {
    IoTrashOutline,
    IoServerOutline,
 } from 'react-icons/io5';
-import type { PlaylistEpisode } from '@/lib/types/anime';
+import type { PlaylistEpisode } from '@/types/anime';
 
 interface EpisodeListProps {
    episodes: PlaylistEpisode[];

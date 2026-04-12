@@ -1,13 +1,17 @@
 'use client';
 
-import { PATHS } from '@/lib/config/route';
+import { PATHS } from '@/lib/config/routes';
+import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import { FormEvent, useEffect, useState } from 'react';
 import {
    IoCloseCircle,
    IoSearch,
    IoNotificationsOutline,
 } from 'react-icons/io5';
+import AuthModal from '@/components/modals/AuthModal';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
 
 const SCROLL_CONTAINER_SELECTOR = '[data-header-scroll-container="true"]';
 
@@ -19,10 +23,19 @@ export default function Header() {
 
    const [query, setQuery] = useState('');
    const [hasScrollableContent, setHasScrollableContent] = useState(false);
+   const { data: session, status } = useSession();
 
-   // 模擬登入狀態 (Mock Login State)
-   const [isLoggedIn, setIsLoggedIn] = useState(false);
+   const isLoggedIn = status === 'authenticated';
    const [isScrollingDown, setIsScrollingDown] = useState(false);
+   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+   // 書籤同步狀態
+   const bookmarkedAnimes = useBookmarkStore((state) => state.bookmarkedAnimes);
+   const setBookmarksFromDB = useBookmarkStore(
+      (state) => state.setBookmarksFromDB,
+   );
+   const clearBookmarks = useBookmarkStore((state) => state.clearBookmarks);
+   const [hasSynced, setHasSynced] = useState(false);
 
    useEffect(() => {
       const nextQuery = searchParams.get('q') ?? '';
@@ -75,17 +88,23 @@ export default function Header() {
 
    // 監聽滾動方向來控制 Header 顯示/隱藏
    useEffect(() => {
-      const scrollContainer = document.querySelector<HTMLElement>(SCROLL_CONTAINER_SELECTOR);
+      const scrollContainer = document.querySelector<HTMLElement>(
+         SCROLL_CONTAINER_SELECTOR,
+      );
       const target = scrollContainer || window;
-      let lastScrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+      let lastScrollY = scrollContainer
+         ? scrollContainer.scrollTop
+         : window.scrollY;
 
       const handleScroll = () => {
-         const currentScrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
-         
+         const currentScrollY = scrollContainer
+            ? scrollContainer.scrollTop
+            : window.scrollY;
+
          if (currentScrollY <= 50) {
             setIsScrollingDown(false); // 頂部始終顯示
          } else if (currentScrollY > lastScrollY + 10) {
-            setIsScrollingDown(true);  // 向下滑動，隱藏
+            setIsScrollingDown(true); // 向下滑動，隱藏
          } else if (currentScrollY < lastScrollY - 10) {
             setIsScrollingDown(false); // 向上滑動，顯示
          }
@@ -95,6 +114,43 @@ export default function Header() {
       target.addEventListener('scroll', handleScroll, { passive: true });
       return () => target.removeEventListener('scroll', handleScroll);
    }, [pathname]);
+
+   // 登入後自動同步 Local Storage 與資料庫
+   useEffect(() => {
+      if (!isLoggedIn || hasSynced) {
+         return;
+      }
+
+      let canceled = false;
+
+      const syncBookmarks = async () => {
+         try {
+            const res = await fetch('/api/bookmarks/sync', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ localBookmarks: bookmarkedAnimes }),
+            });
+
+            if (!res.ok || canceled) {
+               return;
+            }
+
+            const data = await res.json();
+            if (!canceled) {
+               setBookmarksFromDB(data.bookmarks);
+               setHasSynced(true);
+            }
+         } catch (error) {
+            console.error('Sync failed', error);
+         }
+      };
+
+      syncBookmarks();
+
+      return () => {
+         canceled = true;
+      };
+   }, [isLoggedIn, hasSynced, bookmarkedAnimes, setBookmarksFromDB]);
 
    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -133,13 +189,18 @@ export default function Header() {
       }
    };
 
+   const avatarSrc =
+      session?.user?.image ||
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=A07CFE';
+   const displayName = session?.user?.name || session?.user?.email || 'User';
+
    return (
       <header
-         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-500 sm:px-8 sm:py-4 border-b border-white/10 ${
+         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-500 sm:px-8 sm:py-4 ${
             hasScrollableContent
                ? 'bg-[#0B0E14] border-b border-white/10'
                : 'bg-transparent'
-         } ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}
+         } ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} ${pathname === PATHS.BOOKMARK ? 'border-b border-white/10' : ''}`}
       >
          <form
             onSubmit={handleSubmit}
@@ -183,33 +244,49 @@ export default function Header() {
          </form>
 
          <div className="hidden h-full items-center shrink-0 sm:flex">
-            {isLoggedIn ? (
+            {status === 'loading' ? (
+               <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-400 sm:px-6 sm:py-2.5 sm:text-sm">
+                  Loading...
+               </div>
+            ) : isLoggedIn ? (
                <div className="flex items-center gap-4 lg:gap-6">
                   <button className="relative text-slate-400 hover:text-white transition-colors duration-300">
                      <IoNotificationsOutline size={24} />
                      <span className="absolute top-0 right-0 w-2 h-2 bg-anime-primary rounded-full border border-[#0B0E14]"></span>
                   </button>
                   <button
-                     onClick={() => setIsLoggedIn(false)}
+                     onClick={() => {
+                        clearBookmarks(); // 登出時清空本地書籤
+                        setHasSynced(false);
+                        signOut({ callbackUrl: PATHS.HOME });
+                     }}
                      className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-anime-primary transition-all duration-300 active:scale-95"
-                     title="Sign Out (Mock)"
+                     title="Sign Out"
                   >
-                     <img
-                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=A07CFE"
-                        alt="User Avatar"
+                     <Image
+                        src={avatarSrc}
+                        alt={displayName}
+                        width={40}
+                        height={40}
+                        unoptimized
                         className="w-full h-full object-cover"
                      />
                   </button>
                </div>
             ) : (
                <button
-                  onClick={() => setIsLoggedIn(true)}
+                  onClick={() => setIsAuthModalOpen(true)}
                   className="rounded-xl bg-anime-primary px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-anime-primary/90 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
                >
                   Sign In
                </button>
             )}
          </div>
+
+         <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+         />
       </header>
    );
 }

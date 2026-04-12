@@ -6,7 +6,9 @@ import Hls from 'hls.js';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import EpisodeList from './EpisodeList';
-import type { PlaylistEpisode } from '@/lib/types/anime';
+import { upsertLocalHistory } from '@/lib/utils/local-storage';
+import type { PlaylistEpisode } from '@/types/anime';
+import type { HistoryEntry } from '@/types/history';
 
 interface VideoPlayerProps {
    videoUrl: string;
@@ -16,6 +18,11 @@ interface VideoPlayerProps {
    currentEpNumber: string;
    episodes: PlaylistEpisode[];
    thumbnailUrl?: string; // 預留給未來 API 提供的縮圖拼圖 (Sprite Sheet) 網址
+   historyMeta: {
+      mal_id: number;
+      title: string;
+      image: string;
+   };
 }
 
 export default function VideoPlayer({
@@ -26,12 +33,15 @@ export default function VideoPlayer({
    currentEpNumber,
    episodes,
    thumbnailUrl,
+   historyMeta,
 }: VideoPlayerProps) {
    const artRef = useRef<HTMLDivElement>(null);
    const router = useRouter();
    const [playerNode, setPlayerNode] = useState<HTMLElement | null>(null);
    const [showDrawer, setShowDrawer] = useState(false);
    const autoPlayCanceled = useRef(false); // 用來記錄使用者是否取消了自動播放
+   const lastHistoryPersistAtRef = useRef(0);
+   const lastServerSyncAtRef = useRef(0);
 
    const currentIndex = episodes.findIndex(
       (ep) => ep.number.toString() === currentEpNumber,
@@ -43,6 +53,50 @@ export default function VideoPlayer({
    useEffect(() => {
       autoPlayCanceled.current = false; // 每次切換新集數時，重置取消狀態
       if (!artRef.current) return;
+
+      const syncHistoryToServer = async (entry: HistoryEntry) => {
+         try {
+            await fetch('/api/history', {
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({ item: entry }),
+            });
+         } catch {
+            // Fail silently; local history is still preserved.
+         }
+      };
+
+      const persistWatchHistory = (progressTime: number, forceSync = false) => {
+         if (!Number.isFinite(progressTime) || progressTime < 0) {
+            return;
+         }
+
+         const now = Date.now();
+         if (!forceSync && now - lastHistoryPersistAtRef.current < 5000) {
+            return;
+         }
+
+         lastHistoryPersistAtRef.current = now;
+
+         const normalizedProgress = Number(progressTime.toFixed(2));
+         const entry: HistoryEntry = {
+            mal_id: historyMeta.mal_id,
+            title: historyMeta.title,
+            episode: String(currentEpNumber),
+            progressTime: normalizedProgress,
+            image: historyMeta.image || poster || '',
+            updatedAt: new Date().toISOString(),
+         };
+
+         upsertLocalHistory(entry);
+
+         if (forceSync || now - lastServerSyncAtRef.current >= 15000) {
+            lastServerSyncAtRef.current = now;
+            void syncHistoryToServer(entry);
+         }
+      };
 
       const art = new Artplayer({
          container: artRef.current,
@@ -296,6 +350,13 @@ export default function VideoPlayer({
          });
       }
 
+      art.on('video:ended', () => {
+         const finalProgress = art.duration || art.currentTime;
+         if (finalProgress > 0) {
+            persistWatchHistory(finalProgress, true);
+         }
+      });
+
       // --- 記憶播放進度 ---
       if (storageKey) {
          const cacheKey = `zen-stream-progress-${storageKey}`;
@@ -316,10 +377,18 @@ export default function VideoPlayer({
             if (art.currentTime > 5 && art.duration - art.currentTime > 5) {
                localStorage.setItem(cacheKey, art.currentTime.toString());
             }
+
+            if (art.currentTime > 5) {
+               persistWatchHistory(art.currentTime);
+            }
          });
       }
 
       return () => {
+         if (art.currentTime > 5) {
+            persistWatchHistory(art.currentTime, true);
+         }
+
          window.removeEventListener('keydown', handleKeyDown, {
             capture: true,
          });
@@ -338,6 +407,7 @@ export default function VideoPlayer({
       prevEp,
       nextEp,
       thumbnailUrl,
+      historyMeta,
    ]);
 
    return (

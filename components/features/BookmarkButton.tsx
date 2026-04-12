@@ -2,13 +2,17 @@
 
 import { IoBookmarkOutline, IoBookmark } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import { useBookmarkStore } from '@/lib/store/useBookmarkStore';
-import type { AnimeCard } from '@/lib/types/anime';
+import { useBookmarkStore } from '@/store/useBookmarkStore';
+import type { AnimeCard } from '@/types/anime';
 
 interface BookmarkButtonProps {
    anime: AnimeCard;
    className?: string;
 }
+
+type AudioContextWindow = Window & {
+   webkitAudioContext?: typeof AudioContext;
+};
 
 export default function BookmarkButton({
    anime,
@@ -22,9 +26,15 @@ export default function BookmarkButton({
    // 利用瀏覽器內建 Web Audio API 產生乾淨的「叮」聲 (不需準備 mp3 檔案)
    const playDing = () => {
       try {
-         const AudioContext =
-            window.AudioContext || (window as any).webkitAudioContext;
-         const ctx = new AudioContext();
+         const AudioContextCtor =
+            window.AudioContext ||
+            (window as AudioContextWindow).webkitAudioContext;
+
+         if (!AudioContextCtor) {
+            return;
+         }
+
+         const ctx = new AudioContextCtor();
          const playOscillator = (freq: number, vol: number) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -42,6 +52,10 @@ export default function BookmarkButton({
          };
          playOscillator(880, 0.2); // 主音 A5
          playOscillator(1760, 0.1); // 泛音 A6 (增加清脆感)
+
+         setTimeout(() => {
+            void ctx.close();
+         }, 350);
       } catch (err) {
          console.error('Audio playback failed', err);
       }
@@ -52,13 +66,7 @@ export default function BookmarkButton({
       const isAdded = toggleBookmark(anime);
 
       if (isAdded) {
-         // TODO: 之後可以替換成真實的 auth 狀態判斷
-         const isLoggedIn = false;
-         if (!isLoggedIn) {
-            toast.success('已儲存至本機 (Local Storage)');
-         } else {
-            toast.success('已新增至我的收藏！');
-         }
+         toast.success('已新增至我的收藏！');
       } else {
          toast.success('已從收藏中移除');
       }

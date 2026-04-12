@@ -22,13 +22,17 @@ export default function ShareButton({
                title: title,
                url: url,
             });
-         } catch (err) {
-            console.log('User canceled share or error occurred', err);
+         } catch {
+            // User may cancel the native share dialog.
          }
       } else {
-         await navigator.clipboard.writeText(url);
-         setCopied(true);
-         setTimeout(() => setCopied(false), 2000);
+         try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+         } catch {
+            // Clipboard may be unavailable in restricted contexts.
+         }
       }
    };
 

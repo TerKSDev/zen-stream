@@ -5,7 +5,7 @@ export const PATHS = {
    HOME: '/',
    EXPLORE: '/explore',
    BOOKMARK: '/bookmark',
-   History: '/history',
+   HISTORY: '/history',
 };
 
 interface RouteProps {
@@ -31,7 +31,7 @@ export const ROUTES: RouteProps[] = [
       icon: IoBookmark,
    },
    {
-      path: PATHS.History,
+      path: PATHS.HISTORY,
       name: 'History',
       icon: IoTimeSharp,
    },

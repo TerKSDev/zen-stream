@@ -50,7 +50,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
    return (
       <Transition appear show={isOpen} as={Fragment}>
-         <Dialog as="div" className="relative z-[100]" onClose={handleClose}>
+         <Dialog as="div" className="relative z-100" onClose={handleClose}>
             {/* 變暗且模糊的背景 */}
             <Transition.Child
                as={Fragment}

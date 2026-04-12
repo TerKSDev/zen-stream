@@ -2,22 +2,24 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IoPlayCircle } from 'react-icons/io5';
-import { fetchJikan } from '@/lib/jikan-api';
+import {
+   buildEpisodeFallbackFromAniList,
+   fetchAniListMediaByMalId,
+} from '@/lib/services/anime/anime-fetch';
+import { fetchJikan } from '@/lib/services/anime/jikan-api';
 import AnimeEpisodes from './_components/AnimeEpisodes';
 import AnimeRecommendations from './_components/AnimeRecommendations';
 import AnimeCharacters from './_components/AnimeCharacters';
 import ExpandableSynopsis from './_components/ExpandableSynopsis';
 import PosterLightbox from './_components/PosterLightbox';
-import MobileActionBar from '@/components/MobileActionBar';
-import BookmarkButton from '@/components/ui/BookmarkButton';
-import ShareButton from '@/components/ui/ShareButton';
+import BookmarkButton from '@/components/features/BookmarkButton';
+import ShareButton from '@/components/features/ShareButton';
 import type {
-   AniListMediaResponse,
    AnimeDetail,
    CharacterData,
    EpisodeData,
    RecommendationData,
-} from '@/lib/types/anime';
+} from '@/types/anime';
 
 export default async function AnimeDetailPage({
    params,
@@ -28,10 +30,10 @@ export default async function AnimeDetailPage({
    const mal_id = resolvedParams.mal_id;
 
    // 1. 獲取 Jikan API 動漫詳細資料
-   const jikanData = await fetchJikan(
+   const jikanData = await fetchJikan<{ data: AnimeDetail }>(
       `https://api.jikan.moe/v4/anime/${mal_id}/full`,
    );
-   const anime = jikanData?.data as AnimeDetail | undefined;
+   const anime = jikanData?.data;
 
    if (!anime) {
       return (
@@ -43,94 +45,39 @@ export default async function AnimeDetailPage({
       );
    }
 
-   // 2. 獲取額外資訊
-   const query = `
-      query ($id: Int) {
-         Media(idMal: $id, type: ANIME) {
-            bannerImage
-            episodes
-            nextAiringEpisode {
-               episode
-            }
-            streamingEpisodes {
-               title
-            }
-         }
-      }
-   `;
-
-   // AniList 沒有嚴格限速，獨立發送
-   const anilistPromise = fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-         'Content-Type': 'application/json',
-         Accept: 'application/json',
-      },
-      body: JSON.stringify({ query, variables: { id: parseInt(mal_id, 10) } }),
-      cache: 'no-store',
-   }).catch(() => null);
+   const anilistPromise = fetchAniListMediaByMalId(parseInt(mal_id, 10));
 
    // 延遲 1500 毫秒後請求集數
    await new Promise((resolve) => setTimeout(resolve, 1500));
-   const episodesData = await fetchJikan(
+   const episodesData = await fetchJikan<{ data: EpisodeData[] }>(
       `https://api.jikan.moe/v4/anime/${mal_id}/episodes`,
    );
 
    // 延遲 1500 毫秒後請求角色資料
    await new Promise((resolve) => setTimeout(resolve, 1500));
-   const charactersData = await fetchJikan(
+   const charactersData = await fetchJikan<{ data: CharacterData[] }>(
       `https://api.jikan.moe/v4/anime/${mal_id}/characters`,
    );
 
    // 延遲 1500 毫秒後請求推薦動漫
    await new Promise((resolve) => setTimeout(resolve, 1500));
-   const recommendationsData = await fetchJikan(
+   const recommendationsData = await fetchJikan<{ data: RecommendationData[] }>(
       `https://api.jikan.moe/v4/anime/${mal_id}/recommendations`,
    );
 
-   const anilistRes = await anilistPromise;
-   const anilistData = anilistRes?.ok
-      ? ((await anilistRes.json()) as AniListMediaResponse)
-      : null;
-   const media = anilistData?.data?.Media;
+   const media = await anilistPromise;
    const bannerImage = media?.bannerImage;
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
 
    // 取得最終資料陣列
-   let episodes = (episodesData?.data || []) as EpisodeData[];
+   let episodes = episodesData?.data || [];
    // 限制最多顯示 20 個角色，避免畫面過於冗長
-   const characters = ((charactersData?.data || []) as CharacterData[]).slice(
-      0,
-      20,
-   );
-   const recommendations = (recommendationsData?.data ||
-      []) as RecommendationData[];
+   const characters = (charactersData?.data || []).slice(0, 20);
+   const recommendations = recommendationsData?.data || [];
 
    // 🚨 防呆機制：如果 Jikan 找不到 Episode，改用 AniList 的資料來補齊
-   if (episodes.length === 0 && media) {
-      const airedCount = media.nextAiringEpisode
-         ? media.nextAiringEpisode.episode - 1
-         : media.episodes || 0;
-
-      if (airedCount > 0) {
-         episodes = Array.from({ length: airedCount }, (_, i) => {
-            const epNum = i + 1;
-            const streamEp = media.streamingEpisodes?.find(
-               (ep) =>
-                  ep.title.startsWith(`Episode ${epNum} `) ||
-                  ep.title === `Episode ${epNum}`,
-            );
-
-            let title = `Episode ${epNum}`;
-            if (streamEp && streamEp.title.includes(' - ')) {
-               title = streamEp.title.split(' - ').slice(1).join(' - ').trim();
-            } else if (streamEp) {
-               title = streamEp.title;
-            }
-
-            return { mal_id: epNum, title, title_romanji: null, aired: null };
-         });
-      }
+   if (episodes.length === 0) {
+      episodes = buildEpisodeFallbackFromAniList(media);
    }
 
    return (
@@ -155,8 +102,11 @@ export default async function AnimeDetailPage({
          <div className="relative z-10 w-full pb-32 lg:pb-16 pt-28 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
                {/* 左側：海報與操作區 (Sticky Sidebar) */}
-               <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start z-20">
-                  <div id="mobile-poster" className="w-48 sm:w-56 lg:w-full mx-auto lg:mx-0">
+               <div className="w-full lg:w-70 xl:w-80 shrink-0 flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start z-20">
+                  <div
+                     id="mobile-poster"
+                     className="w-48 sm:w-56 lg:w-full mx-auto lg:mx-0"
+                  >
                      <PosterLightbox
                         src={anime.images.webp.large_image_url}
                         alt={anime.title}
@@ -168,7 +118,7 @@ export default async function AnimeDetailPage({
                         href={`/player/${mal_id}/1`}
                         className="w-full flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-8 py-3 md:py-3.5 bg-anime-primary text-white text-sm sm:text-base md:text-lg font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.6)] active:scale-95 transition-all duration-300"
                      >
-                        <IoPlayCircle className="w-5 h-5 md:w-[26px] md:h-[26px]" />
+                        <IoPlayCircle className="w-5 h-5 md:w-6.5 md:h-6.5" />
                         Watch Now
                      </Link>
 
