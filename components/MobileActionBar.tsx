@@ -12,7 +12,8 @@ export default function MobileActionBar({
    mal_id: string;
    anime: any;
 }) {
-   const [isVisible, setIsVisible] = useState(false);
+   const [isPastPoster, setIsPastPoster] = useState(false);
+   const [isScrollingDown, setIsScrollingDown] = useState(false);
 
    useEffect(() => {
       const target = document.getElementById('mobile-poster');
@@ -21,8 +22,8 @@ export default function MobileActionBar({
       // 利用 IntersectionObserver 監聽海報是否在視窗內
       const observer = new IntersectionObserver(
          ([entry]) => {
-            // 當海報離開視窗 (isIntersecting = false) 時，顯示底部懸浮列
-            setIsVisible(!entry.isIntersecting);
+            // 當海報離開視窗 (isIntersecting = false) 時，代表已經滑過海報
+            setIsPastPoster(!entry.isIntersecting);
          },
          { threshold: 0 }, // threshold: 0 代表目標完全離開可視範圍才觸發
       );
@@ -30,6 +31,38 @@ export default function MobileActionBar({
       observer.observe(target);
       return () => observer.disconnect();
    }, []);
+
+   // 監聽滾動方向
+   useEffect(() => {
+      // 尋找有設定 overflow-y-auto 的主要滾動容器，找不到則退回監聽 window
+      const scrollContainer =
+         document.querySelector('[data-header-scroll-container="true"]') ||
+         window;
+      let lastScrollY =
+         (scrollContainer as HTMLElement).scrollTop || window.scrollY;
+
+      const handleScroll = () => {
+         const currentScrollY =
+            (scrollContainer as HTMLElement).scrollTop || window.scrollY;
+
+         // 加上 10px 的緩衝距離，避免使用者手抖或輕微滑動造成頻繁閃爍
+         if (currentScrollY > lastScrollY + 10) {
+            setIsScrollingDown(true); // 向下滑動，隱藏懸浮列
+         } else if (currentScrollY < lastScrollY - 10) {
+            setIsScrollingDown(false); // 向上滑動，顯示懸浮列
+         }
+         lastScrollY = currentScrollY;
+      };
+
+      // 加上 passive: true 提升滾動效能
+      scrollContainer.addEventListener('scroll', handleScroll, {
+         passive: true,
+      });
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+   }, []);
+
+   // 只有在「滑過海報」且「沒有向下滑動」時，才顯示這個懸浮操作列
+   const isVisible = isPastPoster && !isScrollingDown;
 
    return (
       <div

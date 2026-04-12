@@ -6,7 +6,8 @@ import VideoPlayer from './_components/VideoPlayer';
 import { fetchVideoStream } from '@/app/_actions/anime';
 import EpisodeList from './_components/EpisodeList';
 import AnimeRecommendations from '@/app/(pages)/anime/[mal_id]/_components/AnimeRecommendations';
-import ShareButton from '../../../../../components/ui/ShareButton';
+import ShareButton from '@/components/ui/ShareButton';
+import PlayerMobileActionBar from './_components/PlayerMobileActionBar';
 import type {
    AniListMediaResponse,
    AnimeDetail,
@@ -245,7 +246,10 @@ export default async function AnimeWatchPage({
    const bgImage = bannerImage || anime.images?.webp?.large_image_url;
 
    return (
-      <main className="flex-1 relative min-h-screen lg:h-screen w-full lg:overflow-hidden bg-[#0B0E14] flex flex-col">
+      <main
+         data-header-scroll-container="true"
+         className="flex-1 relative min-h-screen lg:h-screen w-full lg:overflow-hidden overflow-y-auto bg-[#0B0E14] flex flex-col"
+      >
          {/* 背景渲染 */}
          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110 transform-gpu">
             {bgImage && (
@@ -272,13 +276,16 @@ export default async function AnimeWatchPage({
             </Link>
          </header>
 
-         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pb-6 lg:overflow-hidden h-full">
+         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pb-24 lg:pb-6 lg:overflow-hidden h-full">
             {/* 左側容器 */}
             <div className="w-full lg:flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-y-auto transform-gpu [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                {/* ========================================== */}
                {/* 🚀 戰術核心：這裡使用 Suspense 包裹水母抓取器 */}
                {/* ========================================== */}
-               <div className="w-full aspect-video bg-[#07090D] rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col relative overflow-hidden shrink-0">
+               <div
+                  id="mobile-player"
+                  className="w-full aspect-video bg-[#07090D] rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col relative overflow-hidden shrink-0"
+               >
                   <Suspense fallback={<VideoSkeleton bgImage={bgImage} />}>
                      <StreamFetcher
                         searchQuery={searchQuery}
@@ -396,6 +403,14 @@ export default async function AnimeWatchPage({
                malId={malId}
             />
          </div>
+
+         {/* 手機版專屬：底部懸浮播放列 (滑過影片後顯示) */}
+         <PlayerMobileActionBar
+            mal_id={malId}
+            anime={anime}
+            displayTitle={displayTitle}
+            currentEpNumber={currentEpNumber}
+         />
       </main>
    );
 }

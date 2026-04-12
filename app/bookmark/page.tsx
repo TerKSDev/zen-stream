@@ -11,7 +11,6 @@ export default function BookmarkPage() {
    const { bookmarkedAnimes, removeBookmark } = useBookmarkStore();
    const [isMounted, setIsMounted] = useState(false);
 
-   // 確保 Hydration 完成後才渲染，避免 Next.js SSR 與 Client LocalStorage 狀態不一致
    useEffect(() => {
       setIsMounted(true);
    }, []);
@@ -19,14 +18,24 @@ export default function BookmarkPage() {
    if (!isMounted) return null; // 未載入完成前可替換為 Skeleton 骨架屏
 
    return (
-      <main className="flex-1 relative h-full w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-         <div className="flex flex-col min-h-full px-6 py-24 md:px-12 lg:py-32 max-w-screen-2xl mx-auto w-full">
+      <main className="flex-1 relative h-full w-full min-w-0 bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+         <div className="flex flex-col min-h-full px-6 py-24 md:px-8 lg:py-25 max-w-screen-2xl mx-auto w-full">
             {/* 標題與數量統計 */}
-            <div className="flex items-center justify-between mb-8 md:mb-12">
-               <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3 drop-shadow-md">
-                  <IoBookmarkOutline className="text-anime-primary" />
-                  My Bookmarks
-               </h1>
+            <div className="flex items-center justify-between mb-6">
+               <div className="flex items-start mb-2 flex-col">
+                  <div className="flex items-center gap-3">
+                     <IoBookmarkOutline
+                        className="text-anime-primary drop-shadow-[0_0_15px_rgba(160,124,254,0.6)]"
+                        size={36}
+                     />
+                     <h1 className="text-3xl md:text-4xl font-black text-white tracking-wide drop-shadow-md">
+                        My Bookmarks
+                     </h1>
+                  </div>
+                  <p className="text-slate-400 text-sm md:text-base max-w-2xl mt-2">
+                     A collection of your favorite anime titles for easy access.
+                  </p>
+               </div>
                <span className="text-sm font-semibold text-white/70 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
                   {bookmarkedAnimes.length} Items
                </span>
@@ -78,7 +87,7 @@ export default function BookmarkPage() {
                      top trending shows and add them to your list!
                   </p>
                   <Link
-                     href="/"
+                     href="/explore"
                      className="flex items-center gap-2 px-8 py-3 bg-anime-primary text-white font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.4)] active:scale-95 transition-all duration-300"
                   >
                      <IoCompassOutline className="w-5 h-5" />

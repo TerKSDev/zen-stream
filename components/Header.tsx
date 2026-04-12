@@ -22,6 +22,7 @@ export default function Header() {
 
    // 模擬登入狀態 (Mock Login State)
    const [isLoggedIn, setIsLoggedIn] = useState(false);
+   const [isScrollingDown, setIsScrollingDown] = useState(false);
 
    useEffect(() => {
       const nextQuery = searchParams.get('q') ?? '';
@@ -72,6 +73,29 @@ export default function Header() {
       };
    }, [pathname, searchParamsKey]);
 
+   // 監聽滾動方向來控制 Header 顯示/隱藏
+   useEffect(() => {
+      const scrollContainer = document.querySelector<HTMLElement>(SCROLL_CONTAINER_SELECTOR);
+      const target = scrollContainer || window;
+      let lastScrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+
+      const handleScroll = () => {
+         const currentScrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+         
+         if (currentScrollY <= 50) {
+            setIsScrollingDown(false); // 頂部始終顯示
+         } else if (currentScrollY > lastScrollY + 10) {
+            setIsScrollingDown(true);  // 向下滑動，隱藏
+         } else if (currentScrollY < lastScrollY - 10) {
+            setIsScrollingDown(false); // 向上滑動，顯示
+         }
+         lastScrollY = currentScrollY;
+      };
+
+      target.addEventListener('scroll', handleScroll, { passive: true });
+      return () => target.removeEventListener('scroll', handleScroll);
+   }, [pathname]);
+
    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmed = query.trim();
@@ -111,11 +135,11 @@ export default function Header() {
 
    return (
       <header
-         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-300 sm:px-8 sm:py-4 ${
+         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-500 sm:px-8 sm:py-4 border-b border-white/10 ${
             hasScrollableContent
                ? 'bg-[#0B0E14] border-b border-white/10'
                : 'bg-transparent'
-         }`}
+         } ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}
       >
          <form
             onSubmit={handleSubmit}
