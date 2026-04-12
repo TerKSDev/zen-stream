@@ -10,7 +10,7 @@ interface HeroSlideshowProps {
    animes: AnimeCard[];
 }
 
-export default function SlideShow({ animes }: HeroSlideshowProps) {
+export default function HeroSection({ animes }: HeroSlideshowProps) {
    const [activeIndex, setActiveIndex] = useState(0);
    const [isHovered, setIsHovered] = useState(false);
    const scrollContainerRef = useRef<HTMLDivElement>(null);

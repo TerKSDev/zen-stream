@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP, Plus_Jakarta_Sans } from 'next/font/google';
 import { Suspense } from 'react';
 import './globals.css';
-import SideNav from './_components/SideNav';
-import Header from './_components/Header';
+import SideNav from '@/components/SideNav';
+import Header from '@/components/Header';
 
 const inter = Inter({
    subsets: ['latin'],
