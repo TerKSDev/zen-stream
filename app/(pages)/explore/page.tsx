@@ -175,20 +175,24 @@ export default async function ExplorePage({
    return (
       <main
          data-header-scroll-container="true"
-         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:pb-35 flex flex-col"
       >
          {/* 標題 Header 區塊 */}
-         <div className="relative pt-25 pb-4 px-6 md:px-8 bg-linear-to-b from-[#0B0E14] via-[#0B0E14]/90 to-transparent z-10">
+         <div className="relative pt-21 md:pt-25 pb-4 px-4 md:px-8 bg-linear-to-b from-[#0B0E14] via-[#0B0E14]/90 to-transparent z-10">
             <div className="flex items-center gap-3 mb-2">
                <IoCompassOutline
-                  className="text-anime-primary drop-shadow-[0_0_15px_rgba(160,124,254,0.6)]"
+                  className="text-anime-primary drop-shadow-[0_0_15px_rgba(160,124,254,0.6)] hidden md:inline-block"
                   size={36}
                />
-               <h1 className="text-3xl md:text-4xl font-black text-white tracking-wide drop-shadow-md">
+               <IoCompassOutline
+                  className="text-anime-primary drop-shadow-[0_0_10px_rgba(160,124,254,0.5)] inline-block md:hidden"
+                  size={28}
+               />
+               <h1 className="text-2xl md:text-4xl font-black text-white tracking-wide drop-shadow-md">
                   Explore
                </h1>
             </div>
-            <p className="text-slate-400 text-sm md:text-base max-w-2xl mt-2">
+            <p className="text-slate-400 text-xs md:text-base max-w-2xl mt-2">
                {isSearchMode
                   ? 'Search mode is active. Showing filtered results with quick actions.'
                   : 'Browse curated sections by trend, release day, and season highlights.'}

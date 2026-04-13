@@ -11,6 +11,21 @@
    --color-anime-secondary: #1a1d23;
 }
 
+@utility scrollbar-hidden {
+  /* 針對 Chrome, Safari, Opera */
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+  }
+  /* 針對 Firefox */
+  scrollbar-width: none !important;
+  /* 針對 IE, Edge */
+  -ms-overflow-style: none !important;
+}
+
 body,
 html {
    color: var(--color-anime-text);

@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
          },
       ],
    },
+   allowedDevOrigins: ['192.168.43.173'],
 };
 
 export default nextConfig;

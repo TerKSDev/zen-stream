@@ -28,6 +28,7 @@ export default function Header() {
    const isLoggedIn = status === 'authenticated';
    const [isScrollingDown, setIsScrollingDown] = useState(false);
    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+   const [isMounted, setIsMounted] = useState(false);
 
    // 書籤同步狀態
    const bookmarkedAnimes = useBookmarkStore((state) => state.bookmarkedAnimes);
@@ -36,6 +37,10 @@ export default function Header() {
    );
    const clearBookmarks = useBookmarkStore((state) => state.clearBookmarks);
    const [hasSynced, setHasSynced] = useState(false);
+
+   useEffect(() => {
+      setIsMounted(true);
+   }, []);
 
    useEffect(() => {
       const nextQuery = searchParams.get('q') ?? '';
@@ -196,7 +201,7 @@ export default function Header() {
 
    return (
       <header
-         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-3 px-4 py-2 transition-all duration-500 sm:px-8 sm:py-4 ${
+         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-4 p-2.5 transition-all duration-500 sm:px-8 sm:py-4 ${
             hasScrollableContent
                ? 'bg-[#05070a] border-b border-white/10'
                : 'bg-transparent'
@@ -219,7 +224,7 @@ export default function Header() {
                      handleClear();
                   }
                }}
-               className="min-h-10 w-full min-w-0 bg-transparent font-sans text-sm text-white outline-none transition-colors placeholder:text-slate-500 sm:min-h-11"
+               className="min-h-10 w-full min-w-0 bg-transparent font-sans text-sm text-white outline-none transition-colors placeholder:text-slate-500 sm:min-h-11 max-md:text-xs"
                placeholder="Search anime title..."
             />
 
@@ -243,8 +248,8 @@ export default function Header() {
             </button>
          </form>
 
-         <div className="hidden h-full items-center shrink-0 sm:flex">
-            {status === 'loading' ? (
+         <div className="h-full items-center flex">
+            {!isMounted || status === 'loading' ? (
                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-400 sm:px-6 sm:py-2.5 sm:text-sm">
                   Loading...
                </div>
@@ -276,7 +281,7 @@ export default function Header() {
             ) : (
                <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="rounded-xl bg-anime-primary px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-anime-primary/90 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
+                  className="rounded-xl h-full bg-anime-primary px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-anime-primary/90 hover:shadow-[0_0_20px_rgba(160,124,254,0.6)] active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
                >
                   Sign In
                </button>
