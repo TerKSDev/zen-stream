@@ -16,6 +16,7 @@ interface EpisodeListProps {
    currentEpNumber: string;
    malId: string;
    isDrawer?: boolean;
+   isOpen?: boolean;
    onClose?: () => void;
 }
 
@@ -24,6 +25,7 @@ export default function EpisodeList({
    currentEpNumber,
    malId,
    isDrawer,
+   isOpen,
    onClose,
 }: EpisodeListProps) {
    const [search, setSearch] = useState('');
@@ -75,9 +77,10 @@ export default function EpisodeList({
       <div
          className={
             isDrawer
-               ? /* 手機版優化：縮窄側邊欄寬度 (w-[80vw] max-w-[320px]) 避免擋住整個影片 */
-                 'absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-95 h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-9999 flex flex-col pointer-events-auto transition-transform'
-               : 'w-full lg:w-100 shrink-0 flex flex-col h-125 lg:h-full bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
+               ? `absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-95 h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-9999 flex flex-col pointer-events-auto transition-all duration-300 ease-in-out ${
+                    isOpen ? 'translate-x-0 visible opacity-100' : 'translate-x-full invisible opacity-0'
+                 }`
+               : 'w-full lg:w-100 shrink-0 flex flex-col h-125 lg:h-[calc(100vh-8rem)] lg:sticky lg:top-24 bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
          }
       >
          <div className="px-6 py-5 border-b border-white/10 bg-black/40 relative overflow-hidden shrink-0">
@@ -181,7 +184,7 @@ export default function EpisodeList({
                      <Link
                         href={`/player/${malId}/${ep.number}`}
                         key={ep.id}
-                        className={`relative flex items-center gap-4 p-3 md:p-4 rounded-xl transition-all duration-300 group overflow-hidden ${
+                        className={`relative flex items-center gap-4 p-3 md:p-4 rounded-xl transition-all duration-300 group overflow-hidden shrink-0 ${
                            isCurrent
                               ? 'bg-linear-to-r from-anime-primary/20 to-anime-primary/5 border border-anime-primary/30 shadow-[0_4px_20px_rgba(160,124,254,0.15)]'
                               : isWatched

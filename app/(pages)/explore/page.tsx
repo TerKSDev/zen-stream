@@ -175,7 +175,7 @@ export default async function ExplorePage({
    return (
       <main
          data-header-scroll-container="true"
-         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:pb-35 flex flex-col"
+         className="flex-1 relative min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:pb-23 flex flex-col"
       >
          {/* 標題 Header 區塊 */}
          <div className="relative pt-21 md:pt-25 pb-4 px-4 md:px-8 bg-linear-to-b from-[#0B0E14] via-[#0B0E14]/90 to-transparent z-10">

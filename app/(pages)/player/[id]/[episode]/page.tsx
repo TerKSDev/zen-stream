@@ -214,7 +214,7 @@ export default async function AnimeWatchPage({
    return (
       <main
          data-header-scroll-container="true"
-         className="flex-1 relative min-h-screen lg:h-screen w-full lg:overflow-hidden overflow-y-auto bg-[#0B0E14] flex flex-col"
+         className="flex-1 relative min-h-screen w-full overflow-x-hidden overflow-y-auto bg-[#0B0E14] flex flex-col"
       >
          {/* 背景渲染 */}
          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110 transform-gpu">
@@ -229,22 +229,10 @@ export default async function AnimeWatchPage({
          </div>
          <div className="absolute inset-0 bg-linear-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
 
-         <header className="relative z-10 w-full px-6 md:px-8 py-6 pt-8 lg:pt-10 flex items-center justify-between shrink-0 mt-14">
-            <Link
-               href={`/anime/${malId}`}
-               className="flex items-center gap-2 text-slate-400 hover:text-anime-primary transition-colors group bg-white/5 px-4 py-2 rounded-xl backdrop-blur-md border border-white/5 hover:border-anime-primary/30"
-            >
-               <IoArrowBack
-                  className="group-hover:-translate-x-1 transition-transform"
-                  size={20}
-               />
-               <span className="font-semibold text-sm">Back to Details</span>
-            </Link>
-         </header>
-
-         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pb-24 lg:pb-6 lg:overflow-hidden h-full">
+         {/* 將 pt 調整，彌補上方 header 移除後的空間 */}
+         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pt-24 md:pt-26 pb-24 lg:pb-6">
             {/* 左側容器 */}
-            <div className="w-full lg:flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-y-auto transform-gpu [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="w-full lg:flex-1 flex flex-col min-w-0 transform-gpu">
                {/* ========================================== */}
                {/* 🚀 戰術核心：這裡使用 Suspense 包裹水母抓取器 */}
                {/* ========================================== */}
@@ -296,14 +284,19 @@ export default async function AnimeWatchPage({
                   {/* 豐富化的簡介資訊卡 */}
                   <div className="mt-2 p-4 md:p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl transform-gpu shadow-lg flex gap-4 md:gap-6">
                      {/* 左側：動漫海報 (在極小螢幕上隱藏以節省空間) */}
-                     <div className="relative w-24 sm:w-32 md:w-36 aspect-3/4 shrink-0 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 hidden sm:block">
+                     <Link
+                        href={`/anime/${malId}`}
+                        className="relative w-24 sm:w-32 md:w-36 aspect-3/4 shrink-0 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 hidden sm:block group cursor-pointer"
+                        title="Back to Details"
+                     >
                         <Image
                            src={anime.images?.webp?.large_image_url || bgImage}
                            alt={anime.title}
                            fill
-                           className="object-cover"
+                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                     </div>
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                     </Link>
 
                      {/* 右側：詳細標籤與文字 */}
                      <div className="flex flex-col flex-1 min-w-0">
@@ -345,14 +338,30 @@ export default async function AnimeWatchPage({
                            ))}
                         </div>
 
-                        {/* 簡介文字 (使用 line-clamp，Hover 時自動展開) */}
-                        <p
-                           className="text-xs md:text-sm text-slate-400 leading-relaxed text-justify line-clamp-3 md:line-clamp-4 hover:line-clamp-none transition-all duration-300 cursor-pointer"
-                           title="Click to read more"
-                        >
-                           {anime.synopsis ||
-                              'No synopsis available for this anime.'}
-                        </p>
+                        {/* 簡介文字 (使用 CSS-only Checkbox 實作 Read More 切換) */}
+                        <div className="relative">
+                           <input
+                              type="checkbox"
+                              id="desc-toggle"
+                              className="peer hidden"
+                           />
+                           <p className="text-xs md:text-sm text-slate-400 leading-relaxed text-justify line-clamp-3 md:line-clamp-4 peer-checked:line-clamp-none transition-all duration-300">
+                              {anime.synopsis ||
+                                 'No synopsis available for this anime.'}
+                           </p>
+                           <label
+                              htmlFor="desc-toggle"
+                              className="text-anime-primary hover:text-anime-primary/80 text-xs font-bold cursor-pointer mt-1.5 inline-block peer-checked:hidden transition-colors"
+                           >
+                              Read More...
+                           </label>
+                           <label
+                              htmlFor="desc-toggle"
+                              className="text-anime-primary hover:text-anime-primary/80 text-xs font-bold cursor-pointer mt-1.5 hidden peer-checked:inline-block transition-colors"
+                           >
+                              Show Less
+                           </label>
+                        </div>
                      </div>
                   </div>
 

@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { IoArrowBack } from 'react-icons/io5';
 import BookmarkButton from '@/components/features/BookmarkButton';
 import ShareButton from '@/components/features/ShareButton';
 import { useFloatingActionBarVisibility } from '@/hooks/useFloatingActionBarVisibility';
@@ -28,20 +26,13 @@ export default function PlayerMobileActionBar({
                : 'translate-y-[150%] opacity-0'
          }`}
       >
-         <Link
-            href={`/anime/${mal_id}`}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-anime-primary text-white text-base font-bold rounded-xl hover:bg-anime-primary/90 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(160,124,254,0.4)]"
-         >
-            <IoArrowBack className="w-5 h-5" />
-            Details
-         </Link>
          <BookmarkButton
             anime={anime}
-            className="w-12 h-12 shrink-0 p-0 flex items-center justify-center bg-white/5 hover:bg-white/10 border-white/10 rounded-xl [&>span]:hidden"
+            className="flex-1 h-12 p-0 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all shadow-lg [&>svg]:w-5 [&>svg]:h-5"
          />
          <ShareButton
             title={`${displayTitle} - Episode ${currentEpNumber} | ZenStream`}
-            className="w-12 h-12 shrink-0 p-0 flex items-center justify-center bg-white/5 hover:bg-white/10 border-white/10 rounded-xl [&>span]:hidden"
+            className="flex-1 h-12 p-0 flex items-center justify-center gap-2 bg-anime-primary hover:bg-anime-primary/90 border border-anime-primary/50 rounded-xl text-sm font-bold text-white transition-all shadow-[0_0_20px_rgba(160,124,254,0.3)] [&>svg]:w-5 [&>svg]:h-5"
          />
       </div>
    );

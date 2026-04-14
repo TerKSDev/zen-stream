@@ -172,6 +172,7 @@ export default function VideoPlayer({
       // --- 1. 新增：上一集 / 下一集 按鈕 ---
       if (prevEp) {
          art.controls.add({
+            name: 'prevEp',
             position: 'left',
             index: 20,
             html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>',
@@ -181,6 +182,7 @@ export default function VideoPlayer({
       }
       if (nextEp) {
          art.controls.add({
+            name: 'nextEp',
             position: 'left',
             index: 20,
             html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>',
@@ -191,6 +193,7 @@ export default function VideoPlayer({
 
       // --- 2. 新增：播放清單 Drawer 切換按鈕 ---
       art.controls.add({
+         name: 'playlist',
          position: 'right',
          index: 10,
          html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
@@ -350,6 +353,49 @@ export default function VideoPlayer({
          });
       }
 
+      // --- 5. 手機版全螢幕自動鎖定與滑動解鎖 ---
+      let isScreenLocked = false;
+
+      art.on('fullscreen', (state) => {
+         if (!state) {
+            setShowDrawer(false); // 退出全螢幕時自動收起播放清單
+         }
+         
+         if (state && window.innerWidth <= 768) {
+            isScreenLocked = true;
+            art.template.$player.classList.add('screen-dimmed');
+            art.notice.show = 'Screen Locked. Swipe horizontally to unlock.';
+         } else {
+            isScreenLocked = false;
+            art.template.$player.classList.remove('screen-dimmed');
+         }
+      });
+
+      let touchStartX = 0;
+      const handleTouchStart = (e: TouchEvent) => {
+         touchStartX = e.changedTouches[0].screenX;
+      };
+      
+      const handleTouchEnd = (e: TouchEvent) => {
+         if (!isScreenLocked) return;
+         const touchEndX = e.changedTouches[0].screenX;
+         // 滑動距離超過 80px 則觸發解鎖
+         if (Math.abs(touchEndX - touchStartX) > 80) {
+            isScreenLocked = false;
+            art.template.$player.classList.remove('screen-dimmed');
+            // 解鎖時觸發輕微震動 (Haptic Feedback)
+            if ('vibrate' in navigator) {
+               navigator.vibrate(50);
+            }
+            art.notice.show = 'Screen Unlocked';
+         }
+      };
+
+      if (artRef.current) {
+         artRef.current.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
+         artRef.current.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true });
+      }
+
       art.on('video:ended', () => {
          const finalProgress = art.duration || art.currentTime;
          if (finalProgress > 0) {
@@ -392,6 +438,10 @@ export default function VideoPlayer({
          window.removeEventListener('keydown', handleKeyDown, {
             capture: true,
          });
+         if (artRef.current) {
+            artRef.current.removeEventListener('touchstart', handleTouchStart, true);
+            artRef.current.removeEventListener('touchend', handleTouchEnd, true);
+         }
          if (art && art.destroy) {
             art.destroy(true);
          }
@@ -443,6 +493,77 @@ export default function VideoPlayer({
             .art-video-player .art-setting-item.art-current {
                color: #A07CFE !important;
             }
+
+            /* 確保影片本身維持圓角，因為我們將在手機版解除外層的 overflow-hidden */
+            .art-video-player .art-video, 
+            .art-video-player .art-poster {
+               border-radius: 16px;
+            }
+            .art-video-player.art-fullscreen .art-video,
+            .art-video-player.art-fullscreen .art-poster {
+               border-radius: 0;
+            }
+
+            /* 手機版播放列優化：防止控制按鈕過多導致超出畫面 */
+            @media (max-width: 768px) {
+               /* 1. 解除隱藏限制，讓控制列可以超出播放器下方 */
+               .art-video-player:not(.art-fullscreen) {
+                  overflow: visible !important;
+               }
+               
+               /* 2. 將底部控制列移到播放器下方 (推下 48px) */
+               .art-video-player:not(.art-fullscreen) .art-bottom {
+                  position: absolute;
+                  bottom: -48px !important;
+                  left: 0;
+                  right: 0;
+                  background: transparent !important;
+               }
+               
+               /* 3. 將進度條推回影片邊緣 (相對於 .art-bottom 向上 48px) */
+               .art-video-player:not(.art-fullscreen) .art-progress {
+                  bottom: 48px !important; 
+               }
+
+               /* 隱藏手機端不必要的按鈕，釋放空間 (音量鍵在手機由實體鍵控制、畫中畫等不需要) */
+               .art-video-player .art-volume,
+               .art-video-player .art-control-pip,
+               .art-video-player .art-control-airplay {
+                  display: none !important;
+               }
+               /* 縮減時間顯示的左右間隔與字體大小 */
+               .art-video-player .art-time {
+                  margin: 0 4px !important;
+                  font-size: 12px !important;
+               }
+               /* 縮小所有控制按鈕的 padding */
+               .art-video-player .art-control {
+                  padding: 0 8px !important;
+               }
+               
+               /* 4. 全螢幕按鈕獨立拉回播放器內部右下角 */
+               .art-video-player:not(.art-fullscreen) .art-control-fullscreenWeb,
+               .art-video-player:not(.art-fullscreen) .art-control-fullscreen {
+                  position: absolute !important;
+                  bottom: 60px !important; /* 相對於 -48px 的 bottom 往上算，回到影片內 */
+                  right: 12px !important;
+                  background: rgba(11, 14, 20, 0.6) !important;
+                  backdrop-filter: blur(8px);
+                  border-radius: 50% !important;
+                  width: 36px !important;
+                  height: 36px !important;
+                  display: flex !important;
+                  justify-content: center !important;
+                  align-items: center !important;
+                  border: 1px solid rgba(255,255,255,0.1);
+                  z-index: 50 !important;
+               }
+            }
+            @media (max-width: 480px) {
+               .art-video-player .art-control {
+                  padding: 0 5px !important;
+               }
+            }
          `,
             }}
          />
@@ -452,13 +573,13 @@ export default function VideoPlayer({
          />
          {/* 利用 React Portal 將側邊欄渲染到 Artplayer 內部，確保全螢幕時也能顯示！ */}
          {playerNode &&
-            showDrawer &&
             createPortal(
                <EpisodeList
                   episodes={episodes}
                   currentEpNumber={currentEpNumber}
                   malId={malId}
                   isDrawer={true}
+               isOpen={showDrawer}
                   onClose={() => setShowDrawer(false)}
                />,
                playerNode,

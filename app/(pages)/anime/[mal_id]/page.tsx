@@ -86,7 +86,7 @@ export default async function AnimeDetailPage({
          className="flex-1 relative h-full min-h-screen w-full min-w-0 overflow-y-auto bg-[#0B0E14] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       >
          {/* 沉浸式頂部橫幅背景 */}
-         <div className="absolute top-0 left-0 w-full h-[55vh] lg:h-[65vh] z-0 pointer-events-none">
+         <div className="absolute top-0 left-0 w-full h-[80vh] lg:h-[85vh] z-0 pointer-events-none">
             <Image
                src={bgImage}
                alt={anime.title}
@@ -99,7 +99,7 @@ export default async function AnimeDetailPage({
          </div>
 
          {/* 滾動內容容器 - 增加 pb-32 以避免手機版底部懸浮列遮擋內容 */}
-         <div className="relative z-10 w-full pb-32 lg:pb-16 pt-28 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+         <div className="relative z-10 w-full pb-32 lg:pb-16 pt-28 md:pt-38 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
                {/* 左側：海報與操作區 (Sticky Sidebar) */}
                <div className="w-full lg:w-70 xl:w-80 shrink-0 flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start z-20">
@@ -113,7 +113,7 @@ export default async function AnimeDetailPage({
                      />
                   </div>
 
-                  <div className="flex w-full flex-col gap-3 md:gap-4">
+                  <div className="flex w-full flex-col gap-6">
                      <Link
                         href={`/player/${mal_id}/1`}
                         className="w-full flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-8 py-3 md:py-3.5 bg-anime-primary text-white text-sm sm:text-base md:text-lg font-bold rounded-xl hover:bg-anime-primary/90 hover:scale-105 hover:shadow-[0_0_25px_rgba(160,124,254,0.6)] active:scale-95 transition-all duration-300"
@@ -122,7 +122,7 @@ export default async function AnimeDetailPage({
                         Watch Now
                      </Link>
 
-                     <div className="flex flex-row flex-wrap w-full gap-2">
+                     <div className="flex flex-row flex-wrap w-full gap-2.5">
                         <BookmarkButton
                            anime={anime}
                            className="flex-1 py-1.5 md:py-2 text-xs md:text-base bg-white/5 hover:bg-white/10 border-white/10"

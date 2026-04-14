@@ -201,11 +201,14 @@ export default function Header() {
 
    return (
       <header
-         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-4 p-2.5 transition-all duration-500 sm:px-8 sm:py-4 ${
-            hasScrollableContent
-               ? 'bg-[#05070a] border-b border-white/10'
-               : 'bg-transparent'
-         } ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} ${pathname === PATHS.BOOKMARK ? 'border-b border-white/10' : ''}`}
+         className={`absolute top-0 left-0 z-50 flex w-full items-center justify-between gap-4 p-2.5 transition-all duration-500 sm:px-8 sm:py-4 
+            ${
+               hasScrollableContent
+                  ? 'bg-[#05070a] border-b border-white/10'
+                  : 'bg-transparent'
+            } 
+            ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} 
+            ${pathname === PATHS.BOOKMARK ? 'border-b border-white/10' : ''}`}
       >
          <form
             onSubmit={handleSubmit}
