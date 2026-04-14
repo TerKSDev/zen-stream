@@ -25,8 +25,8 @@ export default function AnimeCharacters({ characters }: AnimeCharactersProps) {
    if (!characters || characters.length === 0) return null;
 
    return (
-      <div className="w-full px-6 md:px-8 mt-10 lg:mt-14">
-         <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-6">
+      <div className="w-full mt-2">
+         <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-4">
             <div className="w-1.5 h-6 bg-anime-primary rounded-full shadow-[0_0_10px_rgba(160,124,254,0.6)]" />
             Characters & Voice Actors
          </h3>

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { IoPlayCircle } from 'react-icons/io5';
 import BookmarkButton from '@/components/features/BookmarkButton';
-import { useFloatingActionBarVisibility } from '@/hooks/useFloatingActionBarVisibility';
 import type { AnimeCard } from '@/types/anime';
 
 export default function MobileActionBar({
@@ -13,16 +12,8 @@ export default function MobileActionBar({
    mal_id: string;
    anime: AnimeCard;
 }) {
-   const isVisible = useFloatingActionBarVisibility('mobile-poster');
-
    return (
-      <div
-         className={`fixed bottom-0 left-0 right-0 z-50 flex lg:hidden items-center gap-3 px-4 py-3 bg-[#0B0E14]/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-500 ease-out transform ${
-            isVisible
-               ? 'translate-y-0 opacity-100'
-               : 'translate-y-[150%] opacity-0'
-         }`}
-      >
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex lg:hidden items-center gap-3 px-4 py-3 bg-[#0B0E14]/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pb-[calc(0.75rem+env(safe-area-inset-bottom))] transform translate-y-0 opacity-100">
          <Link
             href={`/player/${mal_id}/1`}
             className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-anime-primary text-white text-base font-bold rounded-xl hover:bg-anime-primary/90 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(160,124,254,0.4)]"

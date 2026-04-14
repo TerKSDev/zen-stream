@@ -217,7 +217,7 @@ export default async function AnimeWatchPage({
          className="flex-1 relative min-h-screen w-full overflow-x-hidden overflow-y-auto bg-[#0B0E14] flex flex-col"
       >
          {/* 背景渲染 */}
-         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110 transform-gpu">
+         <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden opacity-30 blur-[100px] scale-110 transform-gpu">
             {bgImage && (
                <Image
                   src={bgImage}
@@ -230,7 +230,7 @@ export default async function AnimeWatchPage({
          <div className="absolute inset-0 bg-linear-to-b from-[#0B0E14]/80 via-[#0B0E14]/95 to-[#0B0E14] z-0 pointer-events-none" />
 
          {/* 將 pt 調整，彌補上方 header 移除後的空間 */}
-         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-6 px-4 md:px-8 pt-24 md:pt-26 pb-24 lg:pb-6">
+         <div className="relative z-10 flex-1 flex flex-col lg:flex-row gap-2 lg:gap-6 px-4 md:px-8 pt-20 md:pt-26 pb-24 lg:pb-6">
             {/* 左側容器 */}
             <div className="w-full lg:flex-1 flex flex-col min-w-0 transform-gpu">
                {/* ========================================== */}
@@ -253,7 +253,7 @@ export default async function AnimeWatchPage({
                </div>
 
                {/* Anime Info Below Player */}
-               <div className="mt-6 flex flex-col gap-4 shrink-0 pb-12">
+               <div className="mt-4 md:mt-6 flex flex-col gap-4 shrink-0 pb-8">
                   <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                      <div className="flex flex-col gap-2">
                         <h1 className="text-3xl md:text-4xl font-black text-white line-clamp-2 drop-shadow-md">
@@ -365,8 +365,8 @@ export default async function AnimeWatchPage({
                      </div>
                   </div>
 
-                  {/* 推薦動漫區塊 */}
-                  <div className="mt-8 -mx-4 sm:mx-0">
+                  {/* 推薦動漫區塊（桌面端） */}
+                  <div className="hidden lg:block mt-6">
                      <AnimeRecommendations recommendations={recommendations} />
                   </div>
                </div>
@@ -378,6 +378,11 @@ export default async function AnimeWatchPage({
                currentEpNumber={currentEpNumber}
                malId={malId}
             />
+
+            {/* 推薦動漫區塊（手機端：放在 Playlist 之後） */}
+            <div className="lg:hidden mt-6">
+               <AnimeRecommendations recommendations={recommendations} />
+            </div>
          </div>
 
          {/* 手機版專屬：底部懸浮播放列 (滑過影片後顯示) */}

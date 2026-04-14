@@ -1,0 +1,227 @@
+/* ==========================================================
+   1. 全局與桌面端樣式 (Global & Desktop)
+   ========================================================== */
+
+/* --- 1.1 設定面板與右鍵選單 (Settings & Context Menu) --- */
+.art-video-player .art-setting,
+.art-video-player .art-contextmenu {
+   background: rgba(11, 14, 20, 0.85) !important;
+   backdrop-filter: blur(20px) !important;
+   -webkit-backdrop-filter: blur(20px) !important;
+   border: 1px solid rgba(255, 255, 255, 0.1) !important;
+   border-radius: 16px !important;
+   padding: 8px !important;
+   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.art-video-player .art-setting {
+   height: fit-content !important;
+   max-height: min(86vh, 620px) !important;
+}
+
+.art-video-player .art-setting-inner {
+   background: transparent !important;
+   height: fit-content !important;
+   max-height: min(84vh, 600px) !important;
+   overflow-y: auto !important;
+}
+
+/* 面板內按鈕與懸停效果 */
+.art-video-player .art-setting-item,
+.art-video-player .art-contextmenu-item {
+   transition: all 0.2s ease !important;
+   border-radius: 8px !important;
+   margin-bottom: 2px !important;
+}
+
+.art-video-player .art-setting-item:hover,
+.art-video-player .art-contextmenu-item:hover {
+   background-color: rgba(160, 124, 254, 0.2) !important;
+   color: #a07cfe !important;
+}
+
+.art-video-player .art-setting-item.art-current {
+   color: #a07cfe !important;
+}
+
+/* 音量面板僅在程式控制的開啟狀態顯示（避免 hover 永遠展開） */
+.art-video-player .art-control-volume:hover .art-volume-panel {
+   opacity: 0 !important;
+   transform: translateY(10px) !important;
+   pointer-events: none !important;
+}
+
+.art-video-player.volume-panel-open .art-control-volume .art-volume-panel {
+   opacity: 1 !important;
+   transform: translateY(0) !important;
+   pointer-events: auto !important;
+}
+
+/* --- 1.2 播放器外觀 (Player Appearance) --- */
+/* 預設圓角 */
+.art-video-player .art-video,
+.art-video-player .art-poster {
+   border-radius: 16px;
+}
+
+/* 進入全螢幕時取消圓角 */
+.art-video-player.art-fullscreen .art-video,
+.art-video-player.art-fullscreen .art-poster {
+   border-radius: 0;
+}
+
+/* --- 1.3 獨立元件定位 (Floating Elements) --- */
+/* 倒數面板預設位置 (桌面端) */
+#next-ep-container {
+   position: absolute;
+   bottom: 80px;
+   right: 25px;
+}
+
+/* ==========================================================
+   2. 移動端專屬樣式 (Mobile - max-width: 768px)
+   ========================================================== */
+@media (max-width: 768px) {
+   /* --- 2.1 基礎佈局限制 (Base Layout) --- */
+   .art-video-player:not(.art-fullscreen) {
+      overflow: hidden !important;
+   }
+
+   /* --- 2.2 底部控制列與進度條 (Bottom Controls & Progress) --- */
+   /* 壓縮底部控制列的高度與背景 */
+   .art-video-player .art-bottom {
+      height: 46px !important;
+      background: linear-gradient(
+         to top,
+         rgba(0, 0, 0, 0.85),
+         transparent
+      ) !important;
+      padding-bottom: 0 !important;
+      margin-bottom: 0 !important;
+      margin-top: auto !important;
+      overflow: visible !important; /* 讓被推出去的進度條顯示出來 */
+   }
+
+   /* 讓進度條貼齊壓縮後的控制列 */
+   .art-video-player .art-progress {
+      bottom: 0 !important;
+   }
+
+   /* 讓非全螢幕進度條貼齊控制列，不再懸浮在畫面中央 */
+   .art-video-player:not(.art-fullscreen) .art-bottom .art-progress {
+      padding-top: 4px !important;
+      padding-bottom: 2px !important;
+   }
+
+   .art-video-player:not(.art-fullscreen)
+      .art-bottom
+      .art-progress
+      .art-control-progress {
+      height: 5px !important;
+   }
+
+   /* 全螢幕時整體進度條再薄一點 */
+   .art-video-player.art-fullscreen
+      .art-bottom
+      .art-progress
+      .art-control-progress {
+      height: 2.5px !important;
+   }
+
+   /* 全螢幕且控制列自動收起（mini progress）時，降低進度條厚度 */
+   .art-video-player.art-fullscreen.art-mini-progress-bar
+      .art-bottom
+      .art-progress
+      .art-control-progress,
+   .art-video-player.art-fullscreen.art-mini-progress-bar
+      .art-bottom
+      .art-progress
+      .art-control-progress
+      .art-control-progress-inner {
+      height: 1.5px !important;
+   }
+
+   /* 壓縮內部按鈕與文字行高 */
+   .art-video-player .art-control,
+   .art-video-player .art-time {
+      height: 38px !important;
+      line-height: 38px !important;
+   }
+
+   /* --- 2.3 按鈕顯示與隱藏邏輯 (Button Visibility) --- */
+   /* 隱藏非必要按鈕以節省水平空間 */
+   .art-video-player .art-control-airplay,
+   .art-video-player .art-control-setting,
+   .art-video-player .art-control-fullscreenWeb {
+      display: none !important;
+   }
+
+   .art-video-player .art-control-volume .art-volume-slider {
+      touch-action: none;
+   }
+
+   .art-video-player .art-control-volume .art-volume-panel {
+      display: flex !important;
+   }
+
+   /* 播放清單 (Episode List) 按鈕：非全螢幕時隱藏，全螢幕時顯示 */
+   .art-video-player:not(.art-fullscreen) .art-control-playlist {
+      display: none !important;
+   }
+   .art-video-player.art-fullscreen .art-control-playlist {
+      display: flex !important;
+   }
+
+   /* --- 2.4 內部間距與字體微調 (Spacing & Typography) --- */
+   .art-video-player .art-time {
+      margin: 0 4px !important;
+      font-size: 11px !important;
+   }
+   .art-video-player .art-control {
+      padding: 0 6px !important;
+   }
+
+   /* --- 2.5 移動端獨立漂浮元件 (Mobile Floating Elements) --- */
+   /* 將鎖定按鈕移到畫面左側正中間 */
+   .art-video-player .art-control-lock {
+      position: absolute !important;
+      top: 50% !important;
+      left: 12px !important;
+      transform: translateY(-50%) !important;
+      background: rgba(11, 14, 20, 0.6) !important;
+      backdrop-filter: blur(8px);
+      border-radius: 50% !important;
+      width: 38px !important;
+      height: 38px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+   }
+
+   /* 縮小並調整「下一集」倒數面板位置 */
+   #next-ep-container {
+      bottom: 50px;
+      right: 15px;
+      transform: scale(0.85);
+      transform-origin: bottom right;
+   }
+
+   /* --- 2.6 鎖定狀態視覺 (Locked State Overlay) --- */
+   /* 鎖定時加上半透明黑底遮罩 */
+   .art-video-player.screen-locked::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 40;
+      pointer-events: none;
+   }
+
+   /* 鎖定時隱藏上下控制列並禁用點擊 */
+   .art-video-player.screen-locked .art-bottom,
+   .art-video-player.screen-locked .art-top {
+      opacity: 0 !important;
+      pointer-events: none !important;
+   }
+}

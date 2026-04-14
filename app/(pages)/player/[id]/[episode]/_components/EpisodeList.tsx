@@ -78,9 +78,11 @@ export default function EpisodeList({
          className={
             isDrawer
                ? `absolute top-0 right-0 w-[80vw] max-w-[320px] sm:max-w-none sm:w-95 h-full bg-[#0B0E14]/95 border-l border-white/10 backdrop-blur-3xl overflow-hidden shadow-2xl z-9999 flex flex-col pointer-events-auto transition-all duration-300 ease-in-out ${
-                    isOpen ? 'translate-x-0 visible opacity-100' : 'translate-x-full invisible opacity-0'
+                    isOpen
+                       ? 'translate-x-0 visible opacity-100'
+                       : 'translate-x-full invisible opacity-0'
                  }`
-               : 'w-full lg:w-100 shrink-0 flex flex-col h-125 lg:h-[calc(100vh-8rem)] lg:sticky lg:top-24 bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
+               : 'w-full lg:w-100 shrink-0 flex flex-col h-125 lg:h-[calc(100vh-8rem)] lg:sticky lg:top-26 bg-[#0B0E14]/80 border border-white/10 rounded-2xl backdrop-blur-3xl overflow-hidden shadow-2xl ring-1 ring-white/5'
          }
       >
          <div className="px-6 py-5 border-b border-white/10 bg-black/40 relative overflow-hidden shrink-0">
@@ -117,46 +119,59 @@ export default function EpisodeList({
                </div>
             </div>
 
-            {/* 切換伺服器 (Change Server) */}
-            <div className="relative mb-3 group cursor-pointer">
-               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <IoServerOutline
-                     className="text-slate-400 group-hover:text-anime-primary transition-colors"
-                     size={16}
-                  />
-               </div>
-               <select
-                  value={server}
-                  onChange={(e) => setServer(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-10 text-sm font-bold text-white focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all appearance-none cursor-pointer"
-               >
-                  <option value="auto" className="bg-[#0B0E14] text-white">
-                     Server: Auto (Recommended)
-                  </option>
-                  <option value="backup1" className="bg-[#0B0E14] text-white">
-                     Server: Backup 1
-                  </option>
-                  <option value="backup2" className="bg-[#0B0E14] text-white">
-                     Server: Backup 2
-                  </option>
-               </select>
-               {/* 客製化下拉箭頭 */}
-               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                  <svg
-                     className="w-4 h-4 text-slate-400 group-hover:text-anime-primary transition-colors"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24"
-                  >
-                     <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                     ></path>
-                  </svg>
-               </div>
-            </div>
+            {!isDrawer && (
+               <>
+                  {/* 切換伺服器 (Change Server) */}
+                  <div className="relative mb-3 group cursor-pointer">
+                     <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <IoServerOutline
+                           className="text-slate-400 group-hover:text-anime-primary transition-colors"
+                           size={16}
+                        />
+                     </div>
+                     <select
+                        value={server}
+                        onChange={(e) => setServer(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-10 text-sm font-bold text-white focus:outline-none focus:border-anime-primary/50 focus:ring-1 focus:ring-anime-primary/50 transition-all appearance-none cursor-pointer"
+                     >
+                        <option
+                           value="auto"
+                           className="bg-[#0B0E14] text-white"
+                        >
+                           Server: Auto (Recommended)
+                        </option>
+                        <option
+                           value="backup1"
+                           className="bg-[#0B0E14] text-white"
+                        >
+                           Server: Backup 1
+                        </option>
+                        <option
+                           value="backup2"
+                           className="bg-[#0B0E14] text-white"
+                        >
+                           Server: Backup 2
+                        </option>
+                     </select>
+                     {/* 客製化下拉箭頭 */}
+                     <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                        <svg
+                           className="w-4 h-4 text-slate-400 group-hover:text-anime-primary transition-colors"
+                           fill="none"
+                           stroke="currentColor"
+                           viewBox="0 0 24 24"
+                        >
+                           <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                           ></path>
+                        </svg>
+                     </div>
+                  </div>
+               </>
+            )}
 
             {/* 搜尋框 */}
             <div className="relative group">

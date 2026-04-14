@@ -24,8 +24,8 @@ export default function AnimeRecommendations({
    if (!recommendations || recommendations.length === 0) return null;
 
    return (
-      <div className="px-6 md:px-8 mt-12 lg:mt-16">
-         <h3 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+      <div className="mt-2">
+         <h3 className="text-2xl font-bold mb-4 text-white flex items-center gap-3">
             <div className="w-1.5 h-6 bg-anime-primary rounded-full" />
             More Like This
          </h3>

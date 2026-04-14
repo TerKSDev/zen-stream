@@ -9,6 +9,7 @@ import {
    IoCloseCircle,
    IoSearch,
    IoNotificationsOutline,
+   IoMenu,
 } from 'react-icons/io5';
 import AuthModal from '@/components/modals/AuthModal';
 import { useBookmarkStore } from '@/store/useBookmarkStore';
@@ -210,6 +211,15 @@ export default function Header() {
             ${isScrollingDown ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'} 
             ${pathname === PATHS.BOOKMARK ? 'border-b border-white/10' : ''}`}
       >
+         <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('open-sidenav'))}
+            className="md:hidden shrink-0 text-slate-400 hover:text-white transition-colors"
+            aria-label="Open Menu"
+         >
+            <IoMenu size={28} />
+         </button>
+
          <form
             onSubmit={handleSubmit}
             className="group flex w-full min-w-0 max-w-2xl flex-1 items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 backdrop-blur-md transition-all duration-300 hover:bg-white/10 focus-within:border-anime-primary/50 focus-within:bg-[#0B0E14]/90 focus-within:ring-2 focus-within:ring-anime-primary/20 focus-within:shadow-[0_0_20px_rgba(160,124,254,0.2)] sm:px-4"

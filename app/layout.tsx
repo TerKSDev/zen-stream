@@ -48,6 +48,11 @@ export const metadata: Metadata = {
       'ZenStream',
       'Anime Schedule',
       'Trending Anime',
+      'Anime Streaming Platform',
+      'Zen Stream Anime',
+      'Anime Recommendations',
+      'Anime Reviews',
+      'Anime News',
    ],
    authors: [{ name: 'ZenStream' }],
 
@@ -99,24 +104,26 @@ export default function RootLayout({
       >
          <body>
             <AuthSessionProvider>
-               <SideNav />
-               <main className="relative flex h-screen max-h-screen min-h-0 min-w-0 flex-1 flex-col">
-                  <Suspense fallback={null}>
-                     <Header />
-                  </Suspense>
-                  {children}
-                  {/* 全域 Toast 提示設定 */}
-                  <Toaster
-                     position="bottom-right"
-                     toastOptions={{
-                        style: {
-                           background: '#141824',
-                           color: '#fff',
-                           border: '1px solid rgba(255,255,255,0.1)',
-                        },
-                     }}
-                  />
-               </main>
+               <div className="flex h-[100dvh] w-full overflow-hidden">
+                  <SideNav />
+                  <main className="relative flex h-[100dvh] max-h-[100dvh] min-h-0 min-w-0 flex-1 flex-col">
+                     <Suspense fallback={null}>
+                        <Header />
+                     </Suspense>
+                     {children}
+                     {/* 全域 Toast 提示設定 */}
+                     <Toaster
+                        position="bottom-right"
+                        toastOptions={{
+                           style: {
+                              background: '#141824',
+                              color: '#fff',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                           },
+                        }}
+                     />
+                  </main>
+               </div>
             </AuthSessionProvider>
          </body>
       </html>

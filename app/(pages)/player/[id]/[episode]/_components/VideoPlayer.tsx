@@ -9,6 +9,7 @@ import EpisodeList from './EpisodeList';
 import { upsertLocalHistory } from '@/lib/utils/local-storage';
 import type { PlaylistEpisode } from '@/types/anime';
 import type { HistoryEntry } from '@/types/history';
+import '../player.css';
 
 interface VideoPlayerProps {
    videoUrl: string;
@@ -17,7 +18,7 @@ interface VideoPlayerProps {
    malId: string;
    currentEpNumber: string;
    episodes: PlaylistEpisode[];
-   thumbnailUrl?: string; // 預留給未來 API 提供的縮圖拼圖 (Sprite Sheet) 網址
+   thumbnailUrl?: string;
    historyMeta: {
       mal_id: number;
       title: string;
@@ -39,7 +40,7 @@ export default function VideoPlayer({
    const router = useRouter();
    const [playerNode, setPlayerNode] = useState<HTMLElement | null>(null);
    const [showDrawer, setShowDrawer] = useState(false);
-   const autoPlayCanceled = useRef(false); // 用來記錄使用者是否取消了自動播放
+   const autoPlayCanceled = useRef(false);
    const lastHistoryPersistAtRef = useRef(0);
    const lastServerSyncAtRef = useRef(0);
 
@@ -49,9 +50,10 @@ export default function VideoPlayer({
    const prevEp = currentIndex > 0 ? episodes[currentIndex - 1] : null;
    const nextEp =
       currentIndex < episodes.length - 1 ? episodes[currentIndex + 1] : null;
+   const doubleTapSeekSeconds = 5;
 
    useEffect(() => {
-      autoPlayCanceled.current = false; // 每次切換新集數時，重置取消狀態
+      autoPlayCanceled.current = false;
       if (!artRef.current) return;
 
       const syncHistoryToServer = async (entry: HistoryEntry) => {
@@ -64,19 +66,15 @@ export default function VideoPlayer({
                body: JSON.stringify({ item: entry }),
             });
          } catch {
-            // Fail silently; local history is still preserved.
+            // Fail silently
          }
       };
 
       const persistWatchHistory = (progressTime: number, forceSync = false) => {
-         if (!Number.isFinite(progressTime) || progressTime < 0) {
-            return;
-         }
+         if (!Number.isFinite(progressTime) || progressTime < 0) return;
 
          const now = Date.now();
-         if (!forceSync && now - lastHistoryPersistAtRef.current < 5000) {
-            return;
-         }
+         if (!forceSync && now - lastHistoryPersistAtRef.current < 5000) return;
 
          lastHistoryPersistAtRef.current = now;
 
@@ -98,6 +96,15 @@ export default function VideoPlayer({
          }
       };
 
+      const supportsPip =
+         document.pictureInPictureEnabled ||
+         'requestPictureInPicture' in HTMLVideoElement.prototype ||
+         'webkitSetPresentationMode' in HTMLVideoElement.prototype;
+
+      // Disable default mobile click/double-click toggles to use custom gesture rules.
+      Artplayer.MOBILE_CLICK_PLAY = false;
+      Artplayer.MOBILE_DBCLICK_PLAY = false;
+
       const art = new Artplayer({
          container: artRef.current,
          url: videoUrl,
@@ -105,8 +112,8 @@ export default function VideoPlayer({
          volume: 0.8,
          isLive: false,
          muted: false,
-         autoplay: false, // 保持 false 以符合瀏覽器規範
-         pip: true,
+         autoplay: false,
+         pip: supportsPip,
          autoSize: true,
          autoMini: true,
          screenshot: true,
@@ -117,19 +124,46 @@ export default function VideoPlayer({
          aspectRatio: true,
          fullscreen: true,
          fullscreenWeb: true,
-         subtitleOffset: true,
+         subtitleOffset: false, // 關閉預設，改用下方 custom settings 解決卡頓
          miniProgressBar: true,
          mutex: true,
          backdrop: true,
          playsInline: true,
          autoPlayback: true,
          airplay: true,
-         lock: true, // 針對手機端：加入螢幕防誤觸鎖定按鈕
-         fastForward: true, // 針對手機端：長按畫面可實現 3 倍速快進
-         autoOrientation: true, // 手機旋轉時自動進入全螢幕
-         hotkey: true, // 開啟鍵盤快捷鍵 (空白鍵暫停、左右鍵快轉、上下鍵音量)
-         theme: '#A07CFE', // 注入你的主題紫，讓播放器進度條發亮
-         // --- 替換預設的 Loading 動畫為科技感光環 ---
+         lock: true,
+         gesture: false,
+         fastForward: false,
+         autoOrientation: true,
+         hotkey: true,
+         theme: '#A07CFE',
+         settings: [
+            {
+               name: 'subtitle-offset',
+               html: 'Subtitle Offset',
+               tooltip: '0s',
+               range: [0, -10, 10, 0.1],
+               onChange: function (item: any) {
+                  // 拖曳時只更新顯示，避免即時重算字幕造成掉幀
+                  const previewOffset = Number(item.range[0].toFixed(1));
+                  return `${previewOffset}s`;
+               },
+               onRange: function (item: any) {
+                  // 放開滑塊後再套用，降低 settings 面板拖曳卡頓
+                  const commitOffset = Number(item.range[0].toFixed(1));
+                  requestAnimationFrame(() => {
+                     this.subtitleOffset = commitOffset;
+                  });
+                  return `${commitOffset}s`;
+               },
+               mounted: function (_panel: any, item: any) {
+                  this.on('subtitleOffset', (offset: number) => {
+                     item.$range.value = offset;
+                     item.tooltip = offset + 's';
+                  });
+               },
+            },
+         ],
          icons: {
             loading: `<div class="relative flex items-center justify-center w-16 h-16">
                <div class="absolute inset-0 border-[3px] border-white/10 rounded-full"></div>
@@ -139,22 +173,17 @@ export default function VideoPlayer({
                </svg>
             </div>`,
          },
-         // --- 進度條預覽縮圖配置 (Thumbnails) ---
-         // 若未來 API 能抓到縮圖拼圖 (Sprite Sheet)，只要傳入 thumbnailUrl 就會自動生效！
          ...(thumbnailUrl && {
             thumbnails: {
                url: thumbnailUrl,
-               number: 60, // 假設拼圖內總共有 60 張小縮圖 (需根據實際圖片格式調整)
-               column: 10, // 假設排版為 10 欄 (需根據實際圖片格式調整)
+               number: 60,
+               column: 10,
             },
          }),
          customType: {
             m3u8: function (video, url) {
                if (Hls.isSupported()) {
-                  const hls = new Hls({
-                     // 提高切片加載的容錯率
-                     maxMaxBufferLength: 60,
-                  });
+                  const hls = new Hls({ maxMaxBufferLength: 60 });
                   hls.loadSource(url);
                   hls.attachMedia(video);
                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -164,22 +193,344 @@ export default function VideoPlayer({
          },
       });
 
-      // 保存播放器的 DOM 節點，供 React Portal 掛載 Drawer 使用
       art.on('ready', () => {
-         setPlayerNode(art.template.$player);
+         const playerElement = art.template.$player;
+         setPlayerNode(playerElement);
+
+         const volumeControl = playerElement.querySelector(
+            '.art-control-volume',
+         ) as HTMLElement | null;
+         const volumePanel = playerElement.querySelector(
+            '.art-volume-panel',
+         ) as HTMLElement | null;
+         const volumeSlider = playerElement.querySelector(
+            '.art-volume-slider',
+         ) as HTMLElement | null;
+         const hasVolumePanel =
+            playerElement.querySelector('.art-volume-panel') !== null;
+
+         const isTouchInput = () =>
+            playerElement.classList.contains('art-mobile') ||
+            navigator.maxTouchPoints > 0 ||
+            'ontouchstart' in window;
+
+         // Artplayer sets mobile volume panel to display:none by default; force-enable it for custom touch volume UX.
+         if (isTouchInput() && volumePanel) {
+            volumePanel.style.display = 'flex';
+         }
+
+         const clamp = (value: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, value));
+
+         const isInteractiveTarget = (target: EventTarget | null) => {
+            const element = target as HTMLElement | null;
+            if (!element) return false;
+
+            return Boolean(
+               element.closest(
+                  '.art-controls, .art-setting, .art-settings, .art-contextmenu, .art-contextmenus, .art-layer-auto-playback, #next-ep-container',
+               ),
+            );
+         };
+
+         let volumePanelHideTimer: number | null = null;
+         const hideVolumePanel = () => {
+            playerElement.classList.remove('volume-panel-open');
+         };
+
+         const showVolumePanelTemporarily = () => {
+            if (!hasVolumePanel) return;
+
+            playerElement.classList.add('volume-panel-open');
+            if (volumePanelHideTimer !== null) {
+               window.clearTimeout(volumePanelHideTimer);
+            }
+            volumePanelHideTimer = window.setTimeout(() => {
+               hideVolumePanel();
+               volumePanelHideTimer = null;
+            }, 2000);
+         };
+
+         const setVolume = (nextVolume: number, revealPanel = false) => {
+            const normalizedVolume = clamp(Number(nextVolume.toFixed(2)), 0, 1);
+            art.volume = normalizedVolume;
+            if (normalizedVolume > 0 && art.muted) art.muted = false;
+            if (revealPanel) showVolumePanelTemporarily();
+         };
+
+         const handleVolumeControlClick = () => {
+            showVolumePanelTemporarily();
+         };
+
+         volumeControl?.addEventListener('click', handleVolumeControlClick);
+         volumeControl?.addEventListener(
+            'touchstart',
+            handleVolumeControlClick,
+            {
+               passive: true,
+            },
+         );
+
+         const handleWheel = (e: WheelEvent) => {
+            if (isTouchInput()) return;
+            if (isInteractiveTarget(e.target)) return;
+
+            e.preventDefault();
+            const volumeStep = e.deltaY < 0 ? 0.05 : -0.05;
+            setVolume(art.volume + volumeStep);
+         };
+
+         playerElement.addEventListener('wheel', handleWheel, {
+            passive: false,
+         });
+
+         if (isTouchInput() && volumeSlider) {
+            let isDragging = false;
+            volumeSlider.style.touchAction = 'none';
+
+            const updateVolumeFromTouch = (e: TouchEvent) => {
+               const rect = volumeSlider.getBoundingClientRect();
+               const touch = e.touches[0] || e.changedTouches[0];
+               if (!touch) return;
+
+               let volume = 1 - (touch.clientY - rect.top) / rect.height;
+               volume = clamp(volume, 0, 1);
+               setVolume(volume, true);
+            };
+
+            const handleSliderTouchStart = (e: TouchEvent) => {
+               isDragging = true;
+               e.preventDefault();
+               updateVolumeFromTouch(e);
+            };
+
+            const handleSliderTouchMove = (e: TouchEvent) => {
+               if (!isDragging) return;
+               e.preventDefault();
+               updateVolumeFromTouch(e);
+            };
+
+            const handleSliderTouchEnd = () => {
+               isDragging = false;
+            };
+
+            volumeSlider.addEventListener(
+               'touchstart',
+               handleSliderTouchStart,
+               {
+                  passive: false,
+               },
+            );
+            document.addEventListener('touchmove', handleSliderTouchMove, {
+               passive: false,
+            });
+            document.addEventListener('touchend', handleSliderTouchEnd, {
+               passive: true,
+            });
+            document.addEventListener('touchcancel', handleSliderTouchEnd, {
+               passive: true,
+            });
+
+            art.on('destroy', () => {
+               volumeSlider.removeEventListener(
+                  'touchstart',
+                  handleSliderTouchStart,
+               );
+               document.removeEventListener('touchmove', handleSliderTouchMove);
+               document.removeEventListener('touchend', handleSliderTouchEnd);
+               document.removeEventListener(
+                  'touchcancel',
+                  handleSliderTouchEnd,
+               );
+            });
+         }
+
+         let touchStartX = 0;
+         let touchStartY = 0;
+         let touchStartVolume = 0;
+         let isVolumeSwipe = false;
+         let lastTapAt = 0;
+         let lastTapZone: 'left' | 'right' | null = null;
+
+         const handlePlayerTouchStart = (e: TouchEvent) => {
+            if (!isTouchInput()) return;
+
+            const touch = e.touches[0];
+            if (!touch) return;
+
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchStartVolume = art.volume;
+            isVolumeSwipe = false;
+         };
+
+         const handlePlayerTouchMove = (e: TouchEvent) => {
+            if (!isTouchInput()) return;
+            if (!art.fullscreen || isScreenLocked) return;
+            if (isInteractiveTarget(e.target)) return;
+
+            const touch = e.touches[0];
+            if (!touch) return;
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (!isVolumeSwipe) {
+               const verticalMoveEnough = Math.abs(deltaY) > 12;
+               const mostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
+               if (!verticalMoveEnough || !mostlyVertical) return;
+               isVolumeSwipe = true;
+            }
+
+            e.preventDefault();
+
+            const swipeRatio =
+               (touchStartY - touch.clientY) /
+               Math.max(220, window.innerHeight * 0.35);
+            setVolume(touchStartVolume + swipeRatio);
+         };
+
+         const handlePlayerTouchEnd = (e: TouchEvent) => {
+            const touch = e.changedTouches[0];
+            if (!touch) {
+               isVolumeSwipe = false;
+               return;
+            }
+
+            if (isScreenLocked) {
+               const swipeDistanceX = touch.clientX - touchStartX;
+               if (Math.abs(swipeDistanceX) > 80) {
+                  const lockControl = art.template.$player.querySelector(
+                     '.art-control-lock',
+                  ) as HTMLElement | null;
+                  lockControl?.click();
+                  if ('vibrate' in navigator) navigator.vibrate(50);
+                  art.notice.show = 'Screen Unlocked';
+               }
+               return;
+            }
+
+            if (!isTouchInput()) return;
+            if (isInteractiveTarget(e.target)) return;
+
+            const movedX = Math.abs(touch.clientX - touchStartX);
+            const movedY = Math.abs(touch.clientY - touchStartY);
+
+            if (isVolumeSwipe) {
+               isVolumeSwipe = false;
+               return;
+            }
+
+            if (movedX > 14 || movedY > 14) return;
+
+            const rect = playerElement.getBoundingClientRect();
+            if (!rect.width) return;
+
+            const offsetX = touch.clientX - rect.left;
+            const leftBoundary = rect.width * 0.33;
+            const rightBoundary = rect.width * 0.67;
+            const tapZone =
+               offsetX < leftBoundary
+                  ? 'left'
+                  : offsetX > rightBoundary
+                    ? 'right'
+                    : 'center';
+
+            if (tapZone === 'center') {
+               e.preventDefault();
+               e.stopPropagation();
+               if (art.playing) art.pause();
+               else void art.play();
+               return;
+            }
+
+            const now = Date.now();
+            const isDoubleTap =
+               lastTapZone === tapZone && now - lastTapAt <= 280;
+
+            if (isDoubleTap) {
+               e.preventDefault();
+               e.stopPropagation();
+
+               const seekStep = doubleTapSeekSeconds;
+               const seekDelta = tapZone === 'left' ? -seekStep : seekStep;
+               const duration = Number.isFinite(art.duration)
+                  ? art.duration
+                  : Infinity;
+               art.currentTime = clamp(
+                  art.currentTime + seekDelta,
+                  0,
+                  duration,
+               );
+               art.notice.show =
+                  tapZone === 'left'
+                     ? `Rewind ${seekStep}s`
+                     : `Forward ${seekStep}s`;
+               lastTapAt = 0;
+               lastTapZone = null;
+               return;
+            }
+
+            lastTapAt = now;
+            lastTapZone = tapZone;
+         };
+
+         playerElement.addEventListener('touchstart', handlePlayerTouchStart, {
+            passive: true,
+            capture: true,
+         });
+         playerElement.addEventListener('touchmove', handlePlayerTouchMove, {
+            passive: false,
+            capture: true,
+         });
+         playerElement.addEventListener('touchend', handlePlayerTouchEnd, {
+            passive: false,
+            capture: true,
+         });
+         playerElement.addEventListener('touchcancel', handlePlayerTouchEnd, {
+            passive: true,
+            capture: true,
+         });
+
+         art.on('destroy', () => {
+            if (volumePanelHideTimer !== null) {
+               window.clearTimeout(volumePanelHideTimer);
+            }
+            hideVolumePanel();
+
+            volumeControl?.removeEventListener(
+               'click',
+               handleVolumeControlClick,
+            );
+            volumeControl?.removeEventListener(
+               'touchstart',
+               handleVolumeControlClick,
+            );
+
+            playerElement.removeEventListener('wheel', handleWheel);
+            playerElement.removeEventListener(
+               'touchstart',
+               handlePlayerTouchStart,
+               true,
+            );
+            playerElement.removeEventListener(
+               'touchmove',
+               handlePlayerTouchMove,
+               true,
+            );
+            playerElement.removeEventListener(
+               'touchend',
+               handlePlayerTouchEnd,
+               true,
+            );
+            playerElement.removeEventListener(
+               'touchcancel',
+               handlePlayerTouchEnd,
+               true,
+            );
+         });
       });
 
-      // --- 1. 新增：上一集 / 下一集 按鈕 ---
-      if (prevEp) {
-         art.controls.add({
-            name: 'prevEp',
-            position: 'left',
-            index: 20,
-            html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>',
-            tooltip: `Prev: EP ${prevEp.number}`,
-            click: () => router.push(`/player/${malId}/${prevEp.number}`),
-         });
-      }
       if (nextEp) {
          art.controls.add({
             name: 'nextEp',
@@ -191,7 +542,6 @@ export default function VideoPlayer({
          });
       }
 
-      // --- 2. 新增：播放清單 Drawer 切換按鈕 ---
       art.controls.add({
          name: 'playlist',
          position: 'right',
@@ -201,15 +551,12 @@ export default function VideoPlayer({
          click: () => setShowDrawer((prev) => !prev),
       });
 
-      // --- 3. 攔截鍵盤上下鍵切換集數 ---
       const handleKeyDown = (e: KeyboardEvent) => {
-         // 若正在搜尋框輸入文字，則不攔截
          if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName))
             return;
-
          if (e.key === 'ArrowUp') {
             e.preventDefault();
-            e.stopPropagation(); // 阻止 Artplayer 改變音量
+            e.stopPropagation();
             if (prevEp) {
                art.notice.show = `Loading EP ${prevEp.number}...`;
                router.push(`/player/${malId}/${prevEp.number}`);
@@ -226,10 +573,8 @@ export default function VideoPlayer({
 
       window.addEventListener('keydown', handleKeyDown, { capture: true });
 
-      // --- 4. 自動播放下一集 (Auto-play Next Episode) 倒數面板 ---
       if (nextEp) {
          art.on('ready', () => {
-            // 建立浮動的「下一集」倒數面板
             art.layers.add({
                name: 'next-countdown',
                html: `
@@ -237,9 +582,9 @@ export default function VideoPlayer({
                      <div class="relative flex items-center justify-center w-12 h-12 shrink-0 cursor-pointer group" id="btn-play-next" title="Play Now">
                         <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
                            <circle class="text-white/10" stroke-width="2.5" stroke="currentColor" fill="transparent" r="16" cx="18" cy="18"/>
-                           <circle id="countdown-ring" class="text-anime-primary transition-all duration-300 ease-linear" stroke-width="2.5" stroke-dasharray="100.5" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="transparent" r="16" cx="18" cy="18"/>
+                           <circle id="countdown-ring" class="text-[#A07CFE] transition-all duration-300 ease-linear" stroke-width="2.5" stroke-dasharray="100.5" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="transparent" r="16" cx="18" cy="18"/>
                         </svg>
-                        <div class="w-9 h-9 bg-white/10 group-hover:bg-anime-primary rounded-full flex items-center justify-center transition-colors">
+                        <div class="w-9 h-9 bg-white/10 group-hover:bg-[#A07CFE] rounded-full flex items-center justify-center transition-colors">
                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="text-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
                         </div>
                      </div>
@@ -254,9 +599,12 @@ export default function VideoPlayer({
                `,
                style: {
                   position: 'absolute',
-                  bottom: '80px',
-                  right: '25px',
+                  bottom: '0', // 控制定位改交由 CSS 處理響應式
+                  right: '0',
                   zIndex: '50',
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
                },
             });
 
@@ -268,8 +616,6 @@ export default function VideoPlayer({
             if (btnPlay) {
                btnPlay.addEventListener('click', () => {
                   art.notice.show = `Loading EP ${nextEp.number}...`;
-
-                  // 手動點擊播放時，加入較快的平滑淡出
                   if (art.template.$player) {
                      art.template.$player.style.transition =
                         'opacity 0.4s ease-in-out';
@@ -309,7 +655,6 @@ export default function VideoPlayer({
                '#countdown-ring',
             ) as HTMLElement | null;
 
-            // 倒數 15 秒時浮現
             if (timeLeft <= 15 && timeLeft > 0) {
                if (container && container.classList.contains('opacity-0')) {
                   container.classList.remove(
@@ -317,9 +662,9 @@ export default function VideoPlayer({
                      'opacity-0',
                      'pointer-events-none',
                   );
+                  container.classList.add('pointer-events-auto'); // 讓面板本身可點擊
                }
                if (ring) {
-                  // 計算 SVG 光圈的偏移量 (0 為滿，100.5 為空)，創造倒數消失的效果
                   const offset = ((15 - timeLeft) / 15) * 100.5;
                   ring.style.strokeDashoffset = offset.toString();
                }
@@ -330,16 +675,14 @@ export default function VideoPlayer({
                      'opacity-0',
                      'pointer-events-none',
                   );
+                  container.classList.remove('pointer-events-auto');
                }
             }
          });
 
-         // 影片播放完畢且沒有被取消時，執行跳轉
          art.on('video:ended', () => {
             if (!autoPlayCanceled.current) {
                art.notice.show = `Auto-playing EP ${nextEp.number}...`;
-
-               // 影片自動結束時，加入較舒緩的平滑淡出
                if (art.template.$player) {
                   art.template.$player.style.transition =
                      'opacity 0.8s ease-in-out';
@@ -353,57 +696,29 @@ export default function VideoPlayer({
          });
       }
 
-      // --- 5. 手機版全螢幕自動鎖定與滑動解鎖 ---
       let isScreenLocked = false;
+
+      art.on('lock', (state) => {
+         isScreenLocked = state;
+         art.template.$player.classList.toggle('screen-locked', state);
+         if (state) {
+            art.notice.show = 'Screen Locked. Swipe horizontally to unlock.';
+         }
+      });
 
       art.on('fullscreen', (state) => {
          if (!state) {
-            setShowDrawer(false); // 退出全螢幕時自動收起播放清單
-         }
-         
-         if (state && window.innerWidth <= 768) {
-            isScreenLocked = true;
-            art.template.$player.classList.add('screen-dimmed');
-            art.notice.show = 'Screen Locked. Swipe horizontally to unlock.';
-         } else {
+            setShowDrawer(false);
             isScreenLocked = false;
-            art.template.$player.classList.remove('screen-dimmed');
+            art.template.$player.classList.remove('screen-locked');
          }
       });
-
-      let touchStartX = 0;
-      const handleTouchStart = (e: TouchEvent) => {
-         touchStartX = e.changedTouches[0].screenX;
-      };
-      
-      const handleTouchEnd = (e: TouchEvent) => {
-         if (!isScreenLocked) return;
-         const touchEndX = e.changedTouches[0].screenX;
-         // 滑動距離超過 80px 則觸發解鎖
-         if (Math.abs(touchEndX - touchStartX) > 80) {
-            isScreenLocked = false;
-            art.template.$player.classList.remove('screen-dimmed');
-            // 解鎖時觸發輕微震動 (Haptic Feedback)
-            if ('vibrate' in navigator) {
-               navigator.vibrate(50);
-            }
-            art.notice.show = 'Screen Unlocked';
-         }
-      };
-
-      if (artRef.current) {
-         artRef.current.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
-         artRef.current.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true });
-      }
 
       art.on('video:ended', () => {
          const finalProgress = art.duration || art.currentTime;
-         if (finalProgress > 0) {
-            persistWatchHistory(finalProgress, true);
-         }
+         if (finalProgress > 0) persistWatchHistory(finalProgress, true);
       });
 
-      // --- 記憶播放進度 ---
       if (storageKey) {
          const cacheKey = `zen-stream-progress-${storageKey}`;
 
@@ -423,28 +738,16 @@ export default function VideoPlayer({
             if (art.currentTime > 5 && art.duration - art.currentTime > 5) {
                localStorage.setItem(cacheKey, art.currentTime.toString());
             }
-
-            if (art.currentTime > 5) {
-               persistWatchHistory(art.currentTime);
-            }
+            if (art.currentTime > 5) persistWatchHistory(art.currentTime);
          });
       }
 
       return () => {
-         if (art.currentTime > 5) {
-            persistWatchHistory(art.currentTime, true);
-         }
-
+         if (art.currentTime > 5) persistWatchHistory(art.currentTime, true);
          window.removeEventListener('keydown', handleKeyDown, {
             capture: true,
          });
-         if (artRef.current) {
-            artRef.current.removeEventListener('touchstart', handleTouchStart, true);
-            artRef.current.removeEventListener('touchend', handleTouchEnd, true);
-         }
-         if (art && art.destroy) {
-            art.destroy(true);
-         }
+         if (art && art.destroy) art.destroy(true);
       };
    }, [
       videoUrl,
@@ -462,116 +765,12 @@ export default function VideoPlayer({
 
    return (
       <>
-         {/* 注入自定義樣式，把 Artplayer 原生的設定面板改成高質感深色毛玻璃 */}
-         <style
-            dangerouslySetInnerHTML={{
-               __html: `
-            .art-video-player .art-setting,
-            .art-video-player .art-contextmenu {
-               background: rgba(11, 14, 20, 0.85) !important;
-               backdrop-filter: blur(20px) !important;
-               -webkit-backdrop-filter: blur(20px) !important;
-               border: 1px solid rgba(255, 255, 255, 0.1) !important;
-               border-radius: 16px !important;
-               padding: 8px !important;
-               box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
-            }
-            .art-video-player .art-setting-inner {
-               background: transparent !important;
-            }
-            .art-video-player .art-setting-item,
-            .art-video-player .art-contextmenu-item {
-               transition: all 0.2s ease !important;
-               border-radius: 8px !important;
-               margin-bottom: 2px !important;
-            }
-            .art-video-player .art-setting-item:hover, 
-            .art-video-player .art-contextmenu-item:hover {
-               background-color: rgba(160, 124, 254, 0.2) !important;
-               color: #A07CFE !important;
-            }
-            .art-video-player .art-setting-item.art-current {
-               color: #A07CFE !important;
-            }
-
-            /* 確保影片本身維持圓角，因為我們將在手機版解除外層的 overflow-hidden */
-            .art-video-player .art-video, 
-            .art-video-player .art-poster {
-               border-radius: 16px;
-            }
-            .art-video-player.art-fullscreen .art-video,
-            .art-video-player.art-fullscreen .art-poster {
-               border-radius: 0;
-            }
-
-            /* 手機版播放列優化：防止控制按鈕過多導致超出畫面 */
-            @media (max-width: 768px) {
-               /* 1. 解除隱藏限制，讓控制列可以超出播放器下方 */
-               .art-video-player:not(.art-fullscreen) {
-                  overflow: visible !important;
-               }
-               
-               /* 2. 將底部控制列移到播放器下方 (推下 48px) */
-               .art-video-player:not(.art-fullscreen) .art-bottom {
-                  position: absolute;
-                  bottom: -48px !important;
-                  left: 0;
-                  right: 0;
-                  background: transparent !important;
-               }
-               
-               /* 3. 將進度條推回影片邊緣 (相對於 .art-bottom 向上 48px) */
-               .art-video-player:not(.art-fullscreen) .art-progress {
-                  bottom: 48px !important; 
-               }
-
-               /* 隱藏手機端不必要的按鈕，釋放空間 (音量鍵在手機由實體鍵控制、畫中畫等不需要) */
-               .art-video-player .art-volume,
-               .art-video-player .art-control-pip,
-               .art-video-player .art-control-airplay {
-                  display: none !important;
-               }
-               /* 縮減時間顯示的左右間隔與字體大小 */
-               .art-video-player .art-time {
-                  margin: 0 4px !important;
-                  font-size: 12px !important;
-               }
-               /* 縮小所有控制按鈕的 padding */
-               .art-video-player .art-control {
-                  padding: 0 8px !important;
-               }
-               
-               /* 4. 全螢幕按鈕獨立拉回播放器內部右下角 */
-               .art-video-player:not(.art-fullscreen) .art-control-fullscreenWeb,
-               .art-video-player:not(.art-fullscreen) .art-control-fullscreen {
-                  position: absolute !important;
-                  bottom: 60px !important; /* 相對於 -48px 的 bottom 往上算，回到影片內 */
-                  right: 12px !important;
-                  background: rgba(11, 14, 20, 0.6) !important;
-                  backdrop-filter: blur(8px);
-                  border-radius: 50% !important;
-                  width: 36px !important;
-                  height: 36px !important;
-                  display: flex !important;
-                  justify-content: center !important;
-                  align-items: center !important;
-                  border: 1px solid rgba(255,255,255,0.1);
-                  z-index: 50 !important;
-               }
-            }
-            @media (max-width: 480px) {
-               .art-video-player .art-control {
-                  padding: 0 5px !important;
-               }
-            }
-         `,
-            }}
-         />
+         {/* 移除原本為了容納外推控制列所加的 mb-[56px]，恢復正常佈局 */}
          <div
             ref={artRef}
-            className="w-full aspect-video rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] z-10"
+            className="w-full aspect-video rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] z-10 relative"
          />
-         {/* 利用 React Portal 將側邊欄渲染到 Artplayer 內部，確保全螢幕時也能顯示！ */}
+
          {playerNode &&
             createPortal(
                <EpisodeList
@@ -579,7 +778,7 @@ export default function VideoPlayer({
                   currentEpNumber={currentEpNumber}
                   malId={malId}
                   isDrawer={true}
-               isOpen={showDrawer}
+                  isOpen={showDrawer}
                   onClose={() => setShowDrawer(false)}
                />,
                playerNode,

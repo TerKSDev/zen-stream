@@ -292,7 +292,7 @@ export default function HeroSection({
                   <div className="h-px bg-white/20 flex-1 hidden sm:block" />
                </div>
 
-               <div className="relative w-full -mt-2 h-62 group/slider px-2 md:px-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+               <div className="relative w-full -mt-8 sm:-mt-2 h-62 group/slider px-2 md:px-4 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <button
                      onClick={() => scroll('left')}
                      aria-label="Scroll left"
@@ -364,7 +364,7 @@ export default function HeroSection({
                </div>
 
                {/* 輪播進度指示點 (Pagination Dots) */}
-               <div className="flex justify-center w-full relative z-40 -mt-4">
+               <div className="flex justify-center w-full relative z-40 overflow-hidden -mt-10 sm:-mt-4">
                   <div className="flex items-center gap-4 md:gap-2.5 p-2 md:p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.6)] max-w-[90vw] overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                      {animes.map((_, index) => (
                         <button
